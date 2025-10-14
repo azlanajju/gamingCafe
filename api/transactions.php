@@ -16,6 +16,7 @@ try {
                 $startDate = $_GET['start_date'] ?? null;
                 $endDate = $_GET['end_date'] ?? null;
                 $consoleId = $_GET['console_id'] ?? null;
+                $paymentMethod = $_GET['payment_method'] ?? null;
 
                 $query = "SELECT t.*, u.full_name as user_name, c.name as console_name
                          FROM transactions t 
@@ -42,6 +43,12 @@ try {
                     $query .= " AND t.console_id = ?";
                     $params[] = $consoleId;
                     $types .= "i";
+                }
+
+                if ($paymentMethod) {
+                    $query .= " AND t.payment_method = ?";
+                    $params[] = $paymentMethod;
+                    $types .= "s";
                 }
 
                 $query .= " ORDER BY t.created_at DESC";

@@ -10,7 +10,6 @@ $vipPricing = [];
 
 $stmt = $db->prepare("SELECT * FROM pricing WHERE rate_type = 'regular' ORDER BY player_count ASC");
 $stmt->execute();
-$result = $stmt->get_result();
 while ($row = $result->fetch_assoc()) {
     $regularPricing[] = $row;
 }
@@ -22,18 +21,9 @@ while ($row = $result->fetch_assoc()) {
     $vipPricing[] = $row;
 }
 
-// Fetch settings
-$settings = [];
-$stmt = $db->prepare("SELECT * FROM settings WHERE branch_id = 1");
-$stmt->execute();
-$result = $stmt->get_result();
-while ($row = $result->fetch_assoc()) {
-    $settings[$row['setting_key']] = $row['setting_value'];
-}
-
-$peakMultiplier = $settings['peak_multiplier'] ?? '1.2';
-$weekendMultiplier = $settings['weekend_multiplier'] ?? '1.1';
-$peakHours = $settings['peak_hours'] ?? '';
+$peakMultiplier = '1.2';
+$weekendMultiplier = '1.1';
+$peakHours = '';
 ?>
 
 <section id="price-management" class="content-section active">
@@ -120,33 +110,6 @@ $peakHours = $settings['peak_hours'] ?? '';
                             <?php endforeach; ?>
                         </tbody>
                     </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- Pricing Multipliers -->
-        <div class="card">
-            <div class="card__body">
-                <div class="pricing-section-header">
-                    <h3>Pricing Multipliers</h3>
-                </div>
-                <div class="multipliers-grid">
-                    <div class="multiplier-item">
-                        <div class="multiplier-info">
-                            <h4>Peak Hour Multiplier</h4>
-                            <span class="multiplier-value"><?php echo $peakMultiplier; ?>x</span>
-                            <p class="multiplier-description">Applied during peak hours</p>
-                        </div>
-                        <button class="btn btn--sm btn--outline" onclick="editPeakMultiplier()">✏️ Edit</button>
-                    </div>
-                    <div class="multiplier-item">
-                        <div class="multiplier-info">
-                            <h4>Weekend Multiplier</h4>
-                            <span class="multiplier-value"><?php echo $weekendMultiplier; ?>x</span>
-                            <p class="multiplier-description">Applied on weekends</p>
-                        </div>
-                        <button class="btn btn--sm btn--outline" onclick="editWeekendMultiplier()">✏️ Edit</button>
-                    </div>
                 </div>
             </div>
         </div>
@@ -298,47 +261,6 @@ $peakHours = $settings['peak_hours'] ?? '';
     function editRegularRates() {
         // This function can be used to show regular rates in a different view if needed
         loadPricingData();
-    }
-
-    function editVipRates() {
-        // This function can be used to show VIP rates in a different view if needed
-        loadPricingData();
-    }
-
-    function editPeakMultiplier() {
-        const newValue = prompt('Enter new peak hour multiplier (e.g., 1.2):', '<?php echo $peakMultiplier; ?>');
-        if (newValue && !isNaN(newValue)) {
-            updateSetting('peak_multiplier', newValue);
-        }
-    }
-
-    function editWeekendMultiplier() {
-        const newValue = prompt('Enter new weekend multiplier (e.g., 1.1):', '<?php echo $weekendMultiplier; ?>');
-        if (newValue && !isNaN(newValue)) {
-            updateSetting('weekend_multiplier', newValue);
-        }
-    }
-
-    function updateSetting(key, value) {
-        const data = {};
-        data[key] = value;
-
-        fetch(`${SITE_URL}/api/pricing.php?action=update_settings`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            })
-            .then(res => res.json())
-            .then(result => {
-                if (result.success) {
-                    alert(result.message);
-                    location.reload();
-                } else {
-                    alert('Error: ' + result.message);
-                }
-            });
     }
 
     // Event listeners

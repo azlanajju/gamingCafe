@@ -163,17 +163,17 @@ try {
 
     // Test dashboard API
     echo "<h3>Dashboard API Test</h3>\n";
-    $url = "http://localhost/Gaming-cafe/api/dashboard.php?action=stats&period=daily";
+    $url = "http://localhost/gamingCafe/api/dashboard.php?action=stats&period=daily";
     echo "<p class='info'>Testing: <a href='$url' target='_blank'>$url</a></p>\n";
 
     // Test consoles API
     echo "<h3>Consoles API Test</h3>\n";
-    $url = "http://localhost/Gaming-cafe/api/consoles.php?action=list";
+    $url = "http://localhost/gamingCafe/api/consoles.php?action=list";
     echo "<p class='info'>Testing: <a href='$url' target='_blank'>$url</a></p>\n";
 
     // Test sessions API
     echo "<h3>Sessions API Test</h3>\n";
-    $url = "http://localhost/Gaming-cafe/api/sessions.php?action=list";
+    $url = "http://localhost/gamingCafe/api/sessions.php?action=list";
     echo "<p class='info'>Testing: <a href='$url' target='_blank'>$url</a></p>\n";
     echo "</div>";
 
@@ -194,7 +194,7 @@ try {
     ];
 
     foreach ($testPages as $page => $name) {
-        $url = "http://localhost/Gaming-cafe/$page";
+        $url = "http://localhost/gamingCafe/$page";
         echo "<p class='info'>Test $name: <a href='$url' target='_blank'>$url</a></p>\n";
     }
     echo "</div>";

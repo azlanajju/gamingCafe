@@ -38,9 +38,10 @@ $currentUser = Auth::user();
             <ul class="nav-menu">
                 <li><a href="<?php echo SITE_URL; ?>/pages/dashboard.php" class="nav-item <?php echo ($currentPage ?? '') === 'dashboard' ? 'active' : ''; ?>">📊 Dashboard</a></li>
                 <li><a href="<?php echo SITE_URL; ?>/pages/console-mapping.php" class="nav-item <?php echo ($currentPage ?? '') === 'console-mapping' ? 'active' : ''; ?>">🎮 Console Mapping</a></li>
-                <li><a href="<?php echo SITE_URL; ?>/pages/transactions.php" class="nav-item <?php echo ($currentPage ?? '') === 'transactions' ? 'active' : ''; ?>">💳 Transactions</a></li>
+                <?php if (Auth::hasRole('Admin')): ?>
+                    <li><a href="<?php echo SITE_URL; ?>/pages/transactions.php" class="nav-item <?php echo ($currentPage ?? '') === 'transactions' ? 'active' : ''; ?>">💳 Transactions</a></li>
+                <?php endif; ?>
                 <li><a href="<?php echo SITE_URL; ?>/pages/games.php" class="nav-item <?php echo ($currentPage ?? '') === 'games' ? 'active' : ''; ?>">🎯 Game Management</a></li>
-                <li><a href="<?php echo SITE_URL; ?>/pages/inventory.php" class="nav-item <?php echo ($currentPage ?? '') === 'inventory' ? 'active' : ''; ?>">📦 Inventory</a></li>
                 <li><a href="<?php echo SITE_URL; ?>/pages/fandd-management.php" class="nav-item <?php echo ($currentPage ?? '') === 'fandd-management' ? 'active' : ''; ?>">🍕 F&D Management</a></li>
                 <li><a href="<?php echo SITE_URL; ?>/pages/coupons.php" class="nav-item <?php echo ($currentPage ?? '') === 'coupons' ? 'active' : ''; ?>">🎟️ Coupon Management</a></li>
                 <li><a href="<?php echo SITE_URL; ?>/pages/pricing.php" class="nav-item <?php echo ($currentPage ?? '') === 'pricing' ? 'active' : ''; ?>">💰 Price Management</a></li>

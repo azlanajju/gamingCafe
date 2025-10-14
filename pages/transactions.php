@@ -1,15 +1,48 @@
 <?php
-$pageTitle = 'Transactions';
 $currentPage = 'transactions';
+
+// Check if user is admin - redirect staff to dashboard
+require_once __DIR__ . '/../config/auth.php';
+if (!Auth::hasRole('Admin')) {
+    header('Location: ' . SITE_URL . '/pages/dashboard.php');
+    exit();
+}
+
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
 <section id="transactions" class="content-section active">
     <div class="section-header">
         <h2 class="section-title">Transaction History</h2>
+        <span id="total-count">0 Transactions</span>
     </div>
 
     <div class="card">
+        <!-- Filters and Search Toolbar -->
+        <div class="transaction-toolbar">
+            <div class="toolbar-left">
+                <div class="search-box">
+                    <input type="text" id="search-input" class="search-input" placeholder=" Search customer, console...">
+                    <button class="clear-btn" id="clear-search" style="display: none;"> </button>
+                </div>
+            </div>
+            <div class="toolbar-right">
+                <select id="console-filter" class="filter-select">
+                    <option value="">All Consoles</option>
+                </select>
+                <select id="payment-filter" class="filter-select">
+                    <option value="">All Payments</option>
+                    <option value="cash">Cash</option>
+                    <option value="card">Card</option>
+                    <option value="upi">UPI</option>
+                    <option value="online">Online</option>
+                </select>
+                <input type="date" id="start-date" class="date-input" title="Start Date">
+                <input type="date" id="end-date" class="date-input" title="End Date">
+                <button class="btn btn-primary" id="apply-filters">Apply Filters</button>
+                <button class="btn btn-secondary" id="reset-filters">Reset</button>
+            </div>
+        </div>
 
         <!-- Table -->
         <div class="table-container">
@@ -30,11 +63,11 @@ require_once __DIR__ . '/../includes/header.php';
                     </tr>
                 </thead>
                 <tbody id="transactions-table-body">
-                    <!-- Rows will be loaded here -->
+                    <!-- Transactions will be loaded here dynamically -->
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="4">Grand Totals:</td>
+                        <td colspan="4"><strong>TOTAL:</strong></td>
                         <td id="gaming-total">₹0.00</td>
                         <td id="food-total">₹0.00</td>
                         <td id="grand-total">₹0.00</td>
@@ -44,20 +77,50 @@ require_once __DIR__ . '/../includes/header.php';
             </table>
         </div>
 
+        <!-- Pagination -->
+        <div class="pagination-container">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <label for="items-per-page" style="color: #e2e8f0;">Items per page:</label>
+                    <select id="items-per-page">
+                        <option value="10" selected>10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="all">All</option>
+                    </select>
+                </div>
+                <div class="pagination-info">
+                    Showing <span id="showing-start">0</span> to <span id="showing-end">0</span> of <span id="total-items">0</span> transactions
+                </div>
+                <div style="display: flex; gap: 5px;">
+                    <button class="pagination-btn" id="first-page">First</button>
+                    <button class="pagination-btn" id="prev-page">Previous</button>
+                    <button class="pagination-btn" id="next-page">Next</button>
+                    <button class="pagination-btn" id="last-page">Last</button>
+                </div>
+            </div>
+        </div>
     </div>
 </section>
 
 <style>
+    /* Page scroll container */
+    #transactions {
+        height: calc(100vh - 80px);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
     /* Beautiful Enhanced Table Styles */
     .table-container {
-        overflow-x: auto;
-        overflow-y: visible;
-        border-radius: 12px;
+        flex: 1;
+        overflow: auto;
+        border-radius: 0;
         border: none;
-
-        margin: 20px 0;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-        backdrop-filter: blur(10px);
+        margin: 0;
+        box-shadow: none;
     }
 
     .data-table {
@@ -85,8 +148,7 @@ require_once __DIR__ . '/../includes/header.php';
         left: 0;
         right: 0;
         bottom: 0;
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.9));
-        backdrop-filter: blur(10px);
+        background: #2d2d2d;
         z-index: -1;
     }
 
@@ -233,8 +295,7 @@ require_once __DIR__ . '/../includes/header.php';
         left: 0;
         right: 0;
         bottom: 0;
-        background: linear-gradient(135deg, rgba(255, 107, 107, 0.9), rgba(238, 90, 36, 0.9));
-        backdrop-filter: blur(10px);
+        background: #333;
         z-index: -1;
     }
 
@@ -296,13 +357,15 @@ require_once __DIR__ . '/../includes/header.php';
     }
 
     .btn-primary {
+        background: #28a745;
         color: white;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        border: 1px solid #28a745;
     }
 
     .btn-primary:hover {
+        background: #218838;
         transform: translateY(-2px);
-        box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+        box-shadow: 0 4px 16px rgba(40, 167, 69, 0.4);
     }
 
     .btn-warning {
@@ -362,24 +425,11 @@ require_once __DIR__ . '/../includes/header.php';
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 20px 24px;
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+        padding: 15px 20px;
+        background: #1a1a1a;
         border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px 12px 0 0;
-        backdrop-filter: blur(10px);
-        position: relative;
-    }
-
-    .transaction-toolbar::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(135deg, rgba(26, 26, 46, 0.8), rgba(22, 33, 62, 0.8));
-        border-radius: 12px 12px 0 0;
-        z-index: -1;
+        flex-shrink: 0;
+        z-index: 100;
     }
 
     .toolbar-left {
@@ -418,8 +468,8 @@ require_once __DIR__ . '/../includes/header.php';
 
     .search-input:focus {
         outline: none;
-        border-color: #667eea;
-        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+        border-color: #28a745;
+        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.2);
         background: rgba(255, 255, 255, 0.08);
     }
 
@@ -450,9 +500,8 @@ require_once __DIR__ . '/../includes/header.php';
     /* Enhanced stats display */
     .transaction-toolbar span {
         padding: 8px 15px !important;
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2)) !important;
+        background: #2d2d2d !important;
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        backdrop-filter: blur(10px) !important;
         color: #e2e8f0 !important;
         border-radius: 8px !important;
     }
@@ -471,34 +520,16 @@ require_once __DIR__ . '/../includes/header.php';
 
     #items-per-page:focus {
         outline: none;
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        border-color: #28a745;
+        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.2);
     }
 
-    #items-per-page option {
-        background: #1a1a2e;
-        color: #e2e8f0;
-    }
-
-    /* Beautiful Pagination */
+    /* Pagination Container */
     .pagination-container {
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+        background: #1a1a1a;
         border-top: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 0 0 12px 12px;
-        backdrop-filter: blur(10px);
-        position: relative;
-    }
-
-    .pagination-container::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(135deg, rgba(26, 26, 46, 0.8), rgba(22, 33, 62, 0.8));
-        border-radius: 0 0 12px 12px;
-        z-index: -1;
+        flex-shrink: 0;
+        z-index: 100;
     }
 
     .pagination-btn {
@@ -516,10 +547,10 @@ require_once __DIR__ . '/../includes/header.php';
     }
 
     .pagination-btn:hover:not(:disabled) {
-        background: rgba(102, 126, 234, 0.2);
-        border-color: #667eea;
+        background: #2d2d2d;
+        border-color: #28a745;
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
     }
 
     .pagination-btn:disabled {
@@ -534,6 +565,55 @@ require_once __DIR__ . '/../includes/header.php';
         font-weight: 500;
     }
 
+    /* Filter select styling */
+    .filter-select {
+        padding: 8px 12px;
+        border: 2px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        color: #e2e8f0;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+        cursor: pointer;
+    }
+
+    .filter-select:focus {
+        outline: none;
+        border-color: #28a745;
+        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.2);
+    }
+
+    .filter-select option {
+        background: #1a1a2e;
+        color: #e2e8f0;
+    }
+
+    /* Date input styling */
+    .date-input {
+        padding: 8px 12px;
+        border: 2px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        color: #e2e8f0;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+        cursor: pointer;
+    }
+
+    .date-input:focus {
+        outline: none;
+        border-color: #28a745;
+        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.2);
+    }
+
+    /* Color scheme for date picker */
+    .date-input::-webkit-calendar-picker-indicator {
+        filter: invert(1);
+        cursor: pointer;
+    }
+
     /* Enhanced section styling */
     .section-header {
         display: flex;
@@ -541,6 +621,7 @@ require_once __DIR__ . '/../includes/header.php';
         align-items: center;
         margin-bottom: 24px;
         padding: 20px 0;
+        flex-shrink: 0;
     }
 
     .section-title {
@@ -553,22 +634,23 @@ require_once __DIR__ . '/../includes/header.php';
 
     .section-header span {
         padding: 12px 20px;
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.2));
+        background: #2d2d2d;
         border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 12px;
+        border-radius: 8px;
         font-weight: 600;
         color: #e2e8f0;
-        backdrop-filter: blur(10px);
     }
 
     /* Card styling */
     .card {
-        background: linear-gradient(145deg, #1a1a2e, #16213e);
-        border-radius: 16px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(10px);
+        background: #1a1a1a;
+        border-radius: 0;
+        box-shadow: none;
+        border: none;
         overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
     }
 
     /* Responsive Design */
@@ -635,22 +717,83 @@ require_once __DIR__ . '/../includes/header.php';
 <script>
     let allTransactions = [];
     let filteredTransactions = [];
+    let currentPage = 1;
+    let itemsPerPage = 10;
+    let uniqueConsoles = new Set();
 
-    // Load today's transactions
+    // Initialize date inputs - leave empty to show all transactions
+    function initializeDates() {
+        // Clear date filters to show all transactions by default
+        document.getElementById('start-date').value = '';
+        document.getElementById('end-date').value = '';
+    }
+
+    // Load transactions with filters
     function loadTransactions() {
-        const today = new Date().toISOString().split('T')[0];
-        let url = `${SITE_URL}/api/transactions.php?action=list&start_date=${today}&end_date=${today}`;
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+        
+        let url = `${SITE_URL}/api/transactions.php?action=list`;
+        if (startDate) url += `&start_date=${startDate}`;
+        if (endDate) url += `&end_date=${endDate}`;
 
         fetch(url)
             .then(res => res.json())
             .then(result => {
                 if (result.success) {
                     allTransactions = result.data;
-                    filteredTransactions = result.data;
-                    displayTransactions();
+                    populateConsoleFilter();
+                    applyFilters();
                 }
             })
             .catch(err => console.error('Error loading transactions:', err));
+    }
+
+    // Populate console filter dropdown
+    function populateConsoleFilter() {
+        uniqueConsoles.clear();
+        allTransactions.forEach(txn => {
+            if (txn.console_name) {
+                uniqueConsoles.add(txn.console_name);
+            }
+        });
+
+        const consoleFilter = document.getElementById('console-filter');
+        consoleFilter.innerHTML = '<option value="">All Consoles</option>';
+        Array.from(uniqueConsoles).sort().forEach(console => {
+            const option = document.createElement('option');
+            option.value = console;
+            option.textContent = console;
+            consoleFilter.appendChild(option);
+        });
+    }
+
+    // Apply all filters
+    function applyFilters() {
+        const searchTerm = document.getElementById('search-input').value.toLowerCase();
+        const consoleFilter = document.getElementById('console-filter').value.toLowerCase();
+        const paymentFilter = document.getElementById('payment-filter').value.toLowerCase();
+
+        filteredTransactions = allTransactions.filter(txn => {
+            // Search filter
+            const matchesSearch = !searchTerm || 
+                (txn.customer_name && txn.customer_name.toLowerCase().includes(searchTerm)) ||
+                (txn.console_name && txn.console_name.toLowerCase().includes(searchTerm)) ||
+                (txn.user_name && txn.user_name.toLowerCase().includes(searchTerm));
+
+            // Console filter
+            const matchesConsole = !consoleFilter || 
+                (txn.console_name && txn.console_name.toLowerCase() === consoleFilter);
+
+            // Payment filter
+            const matchesPayment = !paymentFilter || 
+                (txn.payment_method && txn.payment_method.toLowerCase() === paymentFilter);
+
+            return matchesSearch && matchesConsole && matchesPayment;
+        });
+
+        currentPage = 1;
+        displayTransactions();
     }
 
     // Display transactions with pagination
@@ -671,6 +814,11 @@ require_once __DIR__ . '/../includes/header.php';
 
     function displayTransactions() {
         const tbody = document.getElementById('transactions-table-body');
+        if (!tbody) {
+            console.error('Table body element not found');
+            return;
+        }
+        
         tbody.innerHTML = '';
 
         let gamingTotal = 0;
@@ -679,16 +827,31 @@ require_once __DIR__ . '/../includes/header.php';
 
         if (filteredTransactions.length === 0) {
             tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; padding: 20px; color: #999;">No transactions found</td></tr>';
-            document.getElementById('gaming-total').textContent = '₹0.00';
-            document.getElementById('food-total').textContent = '₹0.00';
-            document.getElementById('grand-total').textContent = '₹0.00';
+            const gamingTotalEl = document.getElementById('gaming-total');
+            const foodTotalEl = document.getElementById('food-total');
+            const grandTotalEl = document.getElementById('grand-total');
+            
+            if (gamingTotalEl) gamingTotalEl.textContent = '₹0.00';
+            if (foodTotalEl) foodTotalEl.textContent = '₹0.00';
+            if (grandTotalEl) grandTotalEl.textContent = '₹0.00';
+            
+            updatePaginationInfo(0, 0);
+
+            // Set dynamic heights for empty state
+            setDynamicHeights(0);
             return;
         }
 
-        // Display all transactions (no pagination)
-        filteredTransactions.forEach((txn, index) => {
+        // Display transactions with pagination
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = itemsPerPage === 'all' ? filteredTransactions.length : Math.min(startIndex + itemsPerPage, filteredTransactions.length);
+
+        // Show only transactions for current page
+        const transactionsToShow = filteredTransactions.slice(startIndex, endIndex);
+
+        transactionsToShow.forEach((txn, index) => {
             const tr = document.createElement('tr');
-            const globalIndex = index + 1;
+            const globalIndex = startIndex + index + 1;
 
             tr.innerHTML = `
             <td>${globalIndex}</td>
@@ -713,23 +876,88 @@ require_once __DIR__ . '/../includes/header.php';
             tbody.appendChild(tr);
         });
 
-        // Calculate totals from all filtered transactions
-        filteredTransactions.forEach(txn => {
+        // Calculate totals from displayed transactions only
+        transactionsToShow.forEach(txn => {
             gamingTotal += parseFloat(txn.gaming_amount || 0);
             foodTotal += parseFloat(txn.fandd_amount || txn.food_amount || 0);
             grandTotal += parseFloat(txn.total_amount || 0);
         });
 
-        document.getElementById('gaming-total').textContent = '₹' + gamingTotal.toFixed(2);
-        document.getElementById('food-total').textContent = '₹' + foodTotal.toFixed(2);
-        document.getElementById('grand-total').textContent = '₹' + grandTotal.toFixed(2);
+        const gamingTotalEl = document.getElementById('gaming-total');
+        const foodTotalEl = document.getElementById('food-total');
+        const grandTotalEl = document.getElementById('grand-total');
+        
+        if (gamingTotalEl) gamingTotalEl.textContent = '₹' + gamingTotal.toFixed(2);
+        if (foodTotalEl) foodTotalEl.textContent = '₹' + foodTotal.toFixed(2);
+        if (grandTotalEl) grandTotalEl.textContent = '₹' + grandTotal.toFixed(2);
+        
+        // Update total count and pagination
+        const totalCountEl = document.getElementById('total-count');
+        const totalItemsEl = document.getElementById('total-items');
+
+        if (totalCountEl) totalCountEl.textContent = `${filteredTransactions.length} Transaction${filteredTransactions.length !== 1 ? 's' : ''}`;
+        if (totalItemsEl) totalItemsEl.textContent = filteredTransactions.length;
+
+        const totalPages = Math.ceil(filteredTransactions.length / itemsPerPage);
+        const showingStart = transactionsToShow.length > 0 ? startIndex + 1 : 0;
+        const showingEnd = endIndex;
+
+        updatePaginationInfo(showingStart, showingEnd);
+        updatePaginationButtons(totalPages);
+
+        // Set dynamic heights based on displayed transaction count
+        setDynamicHeights(transactionsToShow.length);
     }
 
-    // Pagination functions removed - no pagination in UI
+    // Set dynamic heights based on transaction count
+    function setDynamicHeights(transactionCount) {
+        const rowHeight = 70; // Height of each table row in pixels
+        const headerHeight = 48; // Header height
+        const footerHeight = 60; // Footer height
+        const toolbarHeight = 70; // Toolbar height
+        const sectionHeaderHeight = 100; // Section header height
+        const paginationHeight = 80; // Pagination height
 
+        // Calculate table body height
+        const tableBodyHeight = Math.max(transactionCount * rowHeight, 200); // Minimum 200px
 
-    // Search functionality removed - no search elements in UI
-    // Items per page functionality removed - no pagination in UI
+        // Calculate total content height
+        const totalContentHeight = sectionHeaderHeight + toolbarHeight + headerHeight + tableBodyHeight + footerHeight + paginationHeight;
+
+        // Set heights
+        const tableContainer = document.querySelector('.table-container');
+        const contentSection = document.querySelector('.content-section');
+
+        if (tableContainer) {
+            tableContainer.style.minHeight = `${tableBodyHeight}px`;
+        }
+
+        if (contentSection) {
+            contentSection.style.minHeight = `${totalContentHeight}px`;
+        }
+    }
+
+    // Update pagination info
+    function updatePaginationInfo(start, end) {
+        const showingStartEl = document.getElementById('showing-start');
+        const showingEndEl = document.getElementById('showing-end');
+        
+        if (showingStartEl) showingStartEl.textContent = start;
+        if (showingEndEl) showingEndEl.textContent = end;
+    }
+
+    // Update pagination buttons
+    function updatePaginationButtons(totalPages) {
+        const firstPageBtn = document.getElementById('first-page');
+        const prevPageBtn = document.getElementById('prev-page');
+        const nextPageBtn = document.getElementById('next-page');
+        const lastPageBtn = document.getElementById('last-page');
+        
+        if (firstPageBtn) firstPageBtn.disabled = currentPage === 1;
+        if (prevPageBtn) prevPageBtn.disabled = currentPage === 1;
+        if (nextPageBtn) nextPageBtn.disabled = currentPage === totalPages || itemsPerPage === 'all';
+        if (lastPageBtn) lastPageBtn.disabled = currentPage === totalPages || itemsPerPage === 'all';
+    }
 
     // Action button functions
     function printTransaction(transactionId) {
@@ -1087,7 +1315,67 @@ Created By: ${transaction.user_name || '-'}
             });
     }
 
+    // Event Listeners
+    document.getElementById('search-input').addEventListener('input', function(e) {
+        const clearBtn = document.getElementById('clear-search');
+        clearBtn.style.display = e.target.value ? 'flex' : 'none';
+        applyFilters();
+    });
+
+    document.getElementById('clear-search').addEventListener('click', function() {
+        document.getElementById('search-input').value = '';
+        this.style.display = 'none';
+        applyFilters();
+    });
+
+    document.getElementById('console-filter').addEventListener('change', applyFilters);
+    document.getElementById('payment-filter').addEventListener('change', applyFilters);
+
+    document.getElementById('apply-filters').addEventListener('click', loadTransactions);
+    
+    document.getElementById('reset-filters').addEventListener('click', function() {
+        initializeDates();
+        document.getElementById('search-input').value = '';
+        document.getElementById('console-filter').value = '';
+        document.getElementById('payment-filter').value = '';
+        document.getElementById('clear-search').style.display = 'none';
+        loadTransactions();
+    });
+
+    document.getElementById('items-per-page').addEventListener('change', function(e) {
+        itemsPerPage = e.target.value === 'all' ? 'all' : parseInt(e.target.value);
+        currentPage = 1;
+        displayTransactions();
+    });
+
+    document.getElementById('first-page').addEventListener('click', function() {
+        currentPage = 1;
+        displayTransactions();
+    });
+
+    document.getElementById('prev-page').addEventListener('click', function() {
+        if (currentPage > 1) {
+            currentPage--;
+            displayTransactions();
+        }
+    });
+
+    document.getElementById('next-page').addEventListener('click', function() {
+        const totalPages = itemsPerPage === 'all' ? 1 : Math.ceil(filteredTransactions.length / itemsPerPage);
+        if (currentPage < totalPages) {
+            currentPage++;
+            displayTransactions();
+        }
+    });
+
+    document.getElementById('last-page').addEventListener('click', function() {
+        const totalPages = itemsPerPage === 'all' ? 1 : Math.ceil(filteredTransactions.length / itemsPerPage);
+        currentPage = totalPages;
+        displayTransactions();
+    });
+
     // Initial load
+    initializeDates();
     loadTransactions();
 
     // Auto-refresh every 30 seconds
