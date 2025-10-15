@@ -38,11 +38,12 @@ INSERT INTO inventory (id, name, category, cost_price, selling_price, stock_quan
 (8, 'Water Bottle', 'Beverages', 0.5, 1.5, 100, '2026-01-01', 'Aqua Pure', 1);
 
 -- Insert sample coupons
-INSERT INTO coupons (id, name, code, description, discount_type, discount_value, usage_limit, min_order_amount, valid_from, valid_to, status, branch_id) VALUES
-(1, 'Happy Hour', 'HAPPY50', '50% off during 2-5 PM', 'percentage', 50, 100, 10.0, '2025-01-01', '2025-12-31', 'Active', 1),
-(2, 'Weekend Special', 'WEEKEND20', '20% off on weekends', 'percentage', 20, 50, 15.0, '2025-01-01', '2025-12-31', 'Active', 1),
-(3, 'Free Time Bonus', 'FREETIME', 'Play 2h get 30m free', 'time_bonus', NULL, 200, 25.0, '2025-01-01', '2025-12-31', 'Active', 1),
-(4, 'Student Discount', 'STUDENT15', '15% off for students', 'percentage', 15, 150, 20.0, '2025-01-01', '2025-12-31', 'Active', 1);
+INSERT INTO coupons (id, name, code, description, discount_type, discount_value, base_minutes, bonus_minutes, loop_bonus, usage_limit, min_order_amount, valid_from, valid_to, status, branch_id) VALUES
+(1, 'Happy Hour', 'HAPPY50', '50% off during 2-5 PM', 'percentage', 50, NULL, NULL, 0, 100, 10.0, '2025-01-01', '2025-12-31', 'Active', 1),
+(2, 'Weekend Special', 'WEEKEND20', '20% off on weekends', 'percentage', 20, NULL, NULL, 0, 50, 15.0, '2025-01-01', '2025-12-31', 'Active', 1),
+(3, 'Free Time Bonus', 'FREETIME', 'Play 2h get 30m free', 'time_bonus', NULL, 120, 30, 0, 200, 25.0, '2025-01-01', '2025-12-31', 'Active', 1),
+(4, 'Loop Time Bonus', 'LOOPBONUS', 'Play 2h get 30m free (loops)', 'time_bonus', NULL, 120, 30, 1, 100, 50.0, '2025-01-01', '2025-12-31', 'Active', 1),
+(5, 'Student Discount', 'STUDENT15', '15% off for students', 'percentage', 15, NULL, NULL, 0, 150, 20.0, '2025-01-01', '2025-12-31', 'Active', 1);
 
 -- Insert sample pricing rules
 INSERT INTO pricing (id, rate_type, player_count, duration_15, duration_30, duration_45, duration_60, branch_id) VALUES
@@ -97,4 +98,5 @@ INSERT INTO game_console_assignments (id, game_id, console_id) VALUES
 (5, 5, 2), -- GTA V on Gaming PC Beta
 (6, 6, 1), -- CS2 on Gaming PC Alpha
 (6, 6, 2); -- CS2 on Gaming PC Beta
+
 

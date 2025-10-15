@@ -16,7 +16,9 @@ require_once __DIR__ . '/../includes/header.php';
                 <option value="desserts">Desserts</option>
                 <option value="other">Other</option>
             </select>
-            <button id="add-item-btn" class="btn btn--primary">Add Item</button>
+            <?php if (Auth::hasRole('Admin') || Auth::hasRole('Manager')): ?>
+                <button id="add-item-btn" class="btn btn--primary">Add Item</button>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -107,10 +109,12 @@ require_once __DIR__ . '/../includes/header.php';
                                 <p class="item-category">${item.category.charAt(0).toUpperCase() + item.category.slice(1)}</p>
                                 ${item.description ? `<p class="item-description">${item.description}</p>` : ''}
                             </div>
+                            ${USER_ROLE === 'Admin' || USER_ROLE === 'Manager' ? `
                             <div class="item-actions">
                                 <button class="btn btn--sm btn--primary" onclick="editItem(${item.id})">Edit</button>
                                 <button class="btn btn--sm btn--danger" onclick="deleteItem(${item.id})">Delete</button>
                             </div>
+                            ` : ''}
                         `;
                         grid.appendChild(card);
                     });
@@ -172,7 +176,10 @@ require_once __DIR__ . '/../includes/header.php';
     }
 
     // Event listeners
-    document.getElementById('add-item-btn').addEventListener('click', addItem);
+    const addItemBtn = document.getElementById('add-item-btn');
+    if (addItemBtn) {
+        addItemBtn.addEventListener('click', addItem);
+    }
 
     document.getElementById('item-form').addEventListener('submit', (e) => {
         e.preventDefault();
@@ -233,21 +240,34 @@ require_once __DIR__ . '/../includes/header.php';
     }
 
     .item-card {
-        border: 1px solid #ddd;
-        border-radius: 8px;
+        border: 1px solid #444;
+        border-radius: 12px;
         padding: 20px;
-        background: white;
+        background: 272929;
         transition: transform 0.2s, box-shadow 0.2s;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .item-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: #444;
     }
 
     .item-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 8px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
+        border-color: #666;
     }
 
     .item-card.unavailable {
         opacity: 0.6;
-        background: #f8f9fa;
+        background: #1a1a1a;
     }
 
     .item-header {
@@ -259,7 +279,7 @@ require_once __DIR__ . '/../includes/header.php';
 
     .item-header h3 {
         margin: 0;
-        color: #333;
+        color: #f3f4f6;
     }
 
     .item-status {
@@ -270,13 +290,13 @@ require_once __DIR__ . '/../includes/header.php';
     }
 
     .item-status.available {
-        background: #d4edda;
-        color: #155724;
+        background: #444;
+        color: #d1d5db;
     }
 
     .item-status.unavailable {
-        background: #f8d7da;
-        color: #721c24;
+        background: #444;
+        color: #d1d5db;
     }
 
     .item-body {
@@ -286,23 +306,23 @@ require_once __DIR__ . '/../includes/header.php';
     .item-price {
         font-size: 18px;
         font-weight: bold;
-        color: #007bff;
+        color: #d1d5db;
         margin: 0 0 8px 0;
     }
 
     .item-stock {
-        color: #666;
+        color: #9ca3af;
         margin: 0 0 8px 0;
     }
 
     .item-category {
-        color: #666;
+        color: #9ca3af;
         margin: 0 0 8px 0;
         text-transform: capitalize;
     }
 
     .item-description {
-        color: #666;
+        color: #9ca3af;
         font-size: 14px;
         margin: 0;
         line-height: 1.4;
@@ -332,4 +352,3 @@ require_once __DIR__ . '/../includes/header.php';
 </style>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
-

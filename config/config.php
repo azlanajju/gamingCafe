@@ -8,7 +8,7 @@ define('DB_NAME', 'gaming_cafe_db');
 
 // Application Configuration
 define('SITE_NAME', 'GameBot Gaming Cafe');
-define('SITE_URL', 'http://localhost/gamingCafe');
+define('SITE_URL', 'http://localhost/Gaming-cafe');
 define('TIMEZONE', 'Asia/Kolkata');
 
 // Session Configuration
@@ -18,11 +18,10 @@ define('SESSION_LIFETIME', 3600); // 1 hour in seconds
 date_default_timezone_set(TIMEZONE);
 
 // Error reporting (set to 0 in production)
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
+error_reporting(0);
+ini_set('display_errors', 0);
 
 // Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
-

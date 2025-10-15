@@ -33,6 +33,47 @@ try {
                 }
 
                 echo json_encode(['success' => true, 'data' => $coupons]);
+            } elseif ($action === 'calculate_time_bonus') {
+                // Calculate time bonus discount
+                $code = $_GET['code'] ?? '';
+                $duration_minutes = intval($_GET['duration'] ?? 0);
+
+                $stmt = $db->prepare("SELECT * FROM coupons WHERE code = ? AND status = 'Active' AND discount_type = 'time_bonus' LIMIT 1");
+                $stmt->bind_param("s", $code);
+                $stmt->execute();
+                $result = $stmt->get_result();
+
+                if ($row = $result->fetch_assoc()) {
+                    $base_minutes = intval($row['base_minutes']);
+                    $bonus_minutes = intval($row['bonus_minutes']);
+                    $loop_bonus = $row['loop_bonus'] == 1;
+
+                    $total_bonus = 0;
+
+                    if ($duration_minutes >= $base_minutes) {
+                        if ($loop_bonus) {
+                            // Loop bonus: calculate how many complete cycles and give bonus for each
+                            $cycles = floor($duration_minutes / $base_minutes);
+                            $total_bonus = $cycles * $bonus_minutes;
+                        } else {
+                            // No loop: only give bonus once
+                            $total_bonus = $bonus_minutes;
+                        }
+                    }
+
+                    echo json_encode([
+                        'success' => true,
+                        'data' => [
+                            'bonus_minutes' => $total_bonus,
+                            'base_minutes' => $base_minutes,
+                            'bonus_per_cycle' => $bonus_minutes,
+                            'loop_bonus' => $loop_bonus,
+                            'cycles' => $loop_bonus ? floor($duration_minutes / $base_minutes) : ($duration_minutes >= $base_minutes ? 1 : 0)
+                        ]
+                    ]);
+                } else {
+                    echo json_encode(['success' => false, 'message' => 'Invalid time bonus coupon']);
+                }
             } elseif ($action === 'validate') {
                 // Validate coupon code
                 $code = $_GET['code'] ?? '';
@@ -73,6 +114,10 @@ try {
                         $discount = ($amount * $row['discount_value']) / 100;
                     } elseif ($row['discount_type'] === 'flat') {
                         $discount = $row['discount_value'];
+                    } elseif ($row['discount_type'] === 'time_bonus') {
+                        // For time bonus, we need to calculate based on duration
+                        // This will be handled in the frontend based on actual session duration
+                        $discount = 0; // Will be calculated based on actual time played
                     }
 
                     $row['calculated_discount'] = $discount;

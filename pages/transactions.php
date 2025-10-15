@@ -35,6 +35,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <option value="cash">Cash</option>
                     <option value="card">Card</option>
                     <option value="upi">UPI</option>
+                    <option value="cash_upi">Cash + UPI</option>
                     <option value="online">Online</option>
                 </select>
                 <input type="date" id="start-date" class="date-input" title="Start Date">
@@ -313,6 +314,20 @@ require_once __DIR__ . '/../includes/header.php';
         flex-wrap: nowrap;
         justify-content: flex-start;
         align-items: center;
+    }
+
+    .payment-breakdown {
+        margin-top: 4px;
+        padding: 4px 8px;
+        background: var(--color-bg-1);
+        border-radius: 4px;
+        border: 1px solid var(--color-border);
+    }
+
+    .payment-breakdown small {
+        color: var(--color-text-secondary);
+        font-size: 11px;
+        font-weight: 500;
     }
 
     .btn {
@@ -629,7 +644,7 @@ require_once __DIR__ . '/../includes/header.php';
         font-size: 28px;
         font-weight: 700;
         margin: 0;
-      
+
     }
 
     .section-header span {
@@ -732,7 +747,7 @@ require_once __DIR__ . '/../includes/header.php';
     function loadTransactions() {
         const startDate = document.getElementById('start-date').value;
         const endDate = document.getElementById('end-date').value;
-        
+
         let url = `${SITE_URL}/api/transactions.php?action=list`;
         if (startDate) url += `&start_date=${startDate}`;
         if (endDate) url += `&end_date=${endDate}`;
@@ -776,17 +791,17 @@ require_once __DIR__ . '/../includes/header.php';
 
         filteredTransactions = allTransactions.filter(txn => {
             // Search filter
-            const matchesSearch = !searchTerm || 
+            const matchesSearch = !searchTerm ||
                 (txn.customer_name && txn.customer_name.toLowerCase().includes(searchTerm)) ||
                 (txn.console_name && txn.console_name.toLowerCase().includes(searchTerm)) ||
                 (txn.user_name && txn.user_name.toLowerCase().includes(searchTerm));
 
             // Console filter
-            const matchesConsole = !consoleFilter || 
+            const matchesConsole = !consoleFilter ||
                 (txn.console_name && txn.console_name.toLowerCase() === consoleFilter);
 
             // Payment filter
-            const matchesPayment = !paymentFilter || 
+            const matchesPayment = !paymentFilter ||
                 (txn.payment_method && txn.payment_method.toLowerCase() === paymentFilter);
 
             return matchesSearch && matchesConsole && matchesPayment;
@@ -818,7 +833,7 @@ require_once __DIR__ . '/../includes/header.php';
             console.error('Table body element not found');
             return;
         }
-        
+
         tbody.innerHTML = '';
 
         let gamingTotal = 0;
@@ -830,11 +845,11 @@ require_once __DIR__ . '/../includes/header.php';
             const gamingTotalEl = document.getElementById('gaming-total');
             const foodTotalEl = document.getElementById('food-total');
             const grandTotalEl = document.getElementById('grand-total');
-            
+
             if (gamingTotalEl) gamingTotalEl.textContent = '₹0.00';
             if (foodTotalEl) foodTotalEl.textContent = '₹0.00';
             if (grandTotalEl) grandTotalEl.textContent = '₹0.00';
-            
+
             updatePaginationInfo(0, 0);
 
             // Set dynamic heights for empty state
@@ -861,7 +876,15 @@ require_once __DIR__ . '/../includes/header.php';
             <td>₹${parseFloat(txn.gaming_amount || 0).toFixed(2)}</td>
             <td>₹${parseFloat(txn.fandd_amount || txn.food_amount || 0).toFixed(2)}</td>
             <td>₹${parseFloat(txn.total_amount || 0).toFixed(2)}</td>
-            <td>${txn.payment_method || txn.payment_status || 'pending'}</td>
+            <td>
+                ${txn.payment_method || txn.payment_status || 'pending'}
+                ${txn.payment_breakdown ? `
+                    <div class="payment-breakdown">
+                        <small>Cash: ${txn.payment_breakdown.cash_amount}</small><br>
+                        <small>UPI: ${txn.payment_breakdown.upi_amount}</small>
+                    </div>
+                ` : ''}
+            </td>
             <td>${formatDate(txn.created_at || txn.transaction_date)}</td>
             <td>${txn.user_name || '-'}</td>
             <td class="action-buttons">
@@ -886,11 +909,11 @@ require_once __DIR__ . '/../includes/header.php';
         const gamingTotalEl = document.getElementById('gaming-total');
         const foodTotalEl = document.getElementById('food-total');
         const grandTotalEl = document.getElementById('grand-total');
-        
+
         if (gamingTotalEl) gamingTotalEl.textContent = '₹' + gamingTotal.toFixed(2);
         if (foodTotalEl) foodTotalEl.textContent = '₹' + foodTotal.toFixed(2);
         if (grandTotalEl) grandTotalEl.textContent = '₹' + grandTotal.toFixed(2);
-        
+
         // Update total count and pagination
         const totalCountEl = document.getElementById('total-count');
         const totalItemsEl = document.getElementById('total-items');
@@ -941,7 +964,7 @@ require_once __DIR__ . '/../includes/header.php';
     function updatePaginationInfo(start, end) {
         const showingStartEl = document.getElementById('showing-start');
         const showingEndEl = document.getElementById('showing-end');
-        
+
         if (showingStartEl) showingStartEl.textContent = start;
         if (showingEndEl) showingEndEl.textContent = end;
     }
@@ -952,7 +975,7 @@ require_once __DIR__ . '/../includes/header.php';
         const prevPageBtn = document.getElementById('prev-page');
         const nextPageBtn = document.getElementById('next-page');
         const lastPageBtn = document.getElementById('last-page');
-        
+
         if (firstPageBtn) firstPageBtn.disabled = currentPage === 1;
         if (prevPageBtn) prevPageBtn.disabled = currentPage === 1;
         if (nextPageBtn) nextPageBtn.disabled = currentPage === totalPages || itemsPerPage === 'all';
@@ -1085,7 +1108,7 @@ require_once __DIR__ . '/../includes/header.php';
             <body>
                 <div class="receipt">
                     <div class="receipt-header">
-                        <img src="assets/logo.png" alt="GameBot Gaming Cafe Logo" class="receipt-logo">
+                        <img src="../assets/logo.png" alt="GameBot Gaming Cafe Logo" class="receipt-logo">
                         <h1 class="receipt-title">GameBot Gaming Cafe</h1>
                         <div class="receipt-divider"></div>
                     </div>
@@ -1111,6 +1134,14 @@ require_once __DIR__ . '/../includes/header.php';
                             <div class="summary-line">
                                 <span>Payment Method:</span> ${(transaction.payment_method || transaction.payment_status || 'pending').charAt(0).toUpperCase() + (transaction.payment_method || transaction.payment_status || 'pending').slice(1)}
                             </div>
+                            ${transaction.payment_breakdown ? `
+                                <div class="summary-line">
+                                    <span>Cash Amount:</span> ${transaction.payment_breakdown.cash_amount}
+                                </div>
+                                <div class="summary-line">
+                                    <span>UPI Amount:</span> ${transaction.payment_breakdown.upi_amount}
+                                </div>
+                            ` : ''}
                             <div class="summary-line">
                                 <span>Staff:</span> ${transaction.user_name || 'N/A'}
                             </div>
@@ -1332,7 +1363,7 @@ Created By: ${transaction.user_name || '-'}
     document.getElementById('payment-filter').addEventListener('change', applyFilters);
 
     document.getElementById('apply-filters').addEventListener('click', loadTransactions);
-    
+
     document.getElementById('reset-filters').addEventListener('click', function() {
         initializeDates();
         document.getElementById('search-input').value = '';

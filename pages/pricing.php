@@ -10,6 +10,7 @@ $vipPricing = [];
 
 $stmt = $db->prepare("SELECT * FROM pricing WHERE rate_type = 'regular' ORDER BY player_count ASC");
 $stmt->execute();
+$result = $stmt->get_result();
 while ($row = $result->fetch_assoc()) {
     $regularPricing[] = $row;
 }
@@ -31,7 +32,9 @@ $peakHours = '';
         <h2 class="section-title">Price Management</h2>
         <div class="header-actions">
             <button id="refresh-pricing-btn" class="btn btn--secondary">🔄 Refresh</button>
-            <button id="add-pricing-btn" class="btn btn--primary">Add Pricing</button>
+            <?php if (Auth::hasRole('Admin') || Auth::hasRole('Manager')): ?>
+                <button id="add-pricing-btn" class="btn btn--primary">Add Pricing</button>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -64,8 +67,10 @@ $peakHours = '';
                                     <td>₹<?php echo number_format($rate['duration_45'], 2); ?></td>
                                     <td>₹<?php echo number_format($rate['duration_60'], 2); ?></td>
                                     <td>
-                                        <button class="btn btn--sm btn--primary" onclick="editPricingEntry(<?php echo $rate['id']; ?>)">Edit</button>
-                                        <button class="btn btn--sm btn--danger" onclick="deletePricingEntry(<?php echo $rate['id']; ?>)">Delete</button>
+                                        <?php if (Auth::hasRole('Admin') || Auth::hasRole('Manager')): ?>
+                                            <button class="btn btn--sm btn--primary" onclick="editPricingEntry(<?php echo $rate['id']; ?>)">Edit</button>
+                                            <button class="btn btn--sm btn--danger" onclick="deletePricingEntry(<?php echo $rate['id']; ?>)">Delete</button>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -103,8 +108,10 @@ $peakHours = '';
                                     <td>₹<?php echo number_format($rate['duration_45'], 2); ?></td>
                                     <td>₹<?php echo number_format($rate['duration_60'], 2); ?></td>
                                     <td>
-                                        <button class="btn btn--sm btn--primary" onclick="editPricingEntry(<?php echo $rate['id']; ?>)">Edit</button>
-                                        <button class="btn btn--sm btn--danger" onclick="deletePricingEntry(<?php echo $rate['id']; ?>)">Delete</button>
+                                        <?php if (Auth::hasRole('Admin') || Auth::hasRole('Manager')): ?>
+                                            <button class="btn btn--sm btn--primary" onclick="editPricingEntry(<?php echo $rate['id']; ?>)">Edit</button>
+                                            <button class="btn btn--sm btn--danger" onclick="deletePricingEntry(<?php echo $rate['id']; ?>)">Delete</button>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -206,8 +213,10 @@ $peakHours = '';
                 <td>₹${parseFloat(rate.duration_45 || 0).toFixed(2)}</td>
                 <td>₹${parseFloat(rate.duration_60 || 0).toFixed(2)}</td>
                 <td>
+                    ${USER_ROLE === 'Admin' || USER_ROLE === 'Manager' ? `
                     <button class="btn btn--sm btn--primary" onclick="editPricingEntry(${rate.id})">Edit</button>
                     <button class="btn btn--sm btn--danger" onclick="deletePricingEntry(${rate.id})">Delete</button>
+                    ` : ''}
                 </td>
             `;
             tableBody.appendChild(row);
@@ -264,7 +273,10 @@ $peakHours = '';
     }
 
     // Event listeners
-    document.getElementById('add-pricing-btn').addEventListener('click', addPricingEntry);
+    const addPricingBtn = document.getElementById('add-pricing-btn');
+    if (addPricingBtn) {
+        addPricingBtn.addEventListener('click', addPricingEntry);
+    }
     document.getElementById('refresh-pricing-btn').addEventListener('click', loadPricingData);
 
     document.getElementById('pricing-form').addEventListener('submit', (e) => {

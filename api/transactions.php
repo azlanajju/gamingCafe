@@ -76,6 +76,18 @@ try {
                     $row['formatted_start'] = date('H:i', strtotime($row['start_time']));
                     $row['formatted_end'] = date('H:i', strtotime($row['end_time']));
 
+                    // Parse payment details for split payments
+                    if ($row['payment_details'] && $row['payment_method'] === 'cash_upi') {
+                        $paymentDetails = json_decode($row['payment_details'], true);
+                        if ($paymentDetails) {
+                            $row['payment_breakdown'] = [
+                                'cash_amount' => '₹' . number_format($paymentDetails['cash_amount'] ?? 0, 2),
+                                'upi_amount' => '₹' . number_format($paymentDetails['upi_amount'] ?? 0, 2),
+                                'total_amount' => '₹' . number_format($paymentDetails['total_amount'] ?? $row['total_amount'], 2)
+                            ];
+                        }
+                    }
+
                     $transactions[] = $row;
                 }
 

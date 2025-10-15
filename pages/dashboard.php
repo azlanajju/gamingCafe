@@ -30,13 +30,15 @@ require_once __DIR__ . '/../includes/header.php';
                 <p class="metric-label">System Total Time</p>
             </div>
         </div>
-        <div class="metric-card card">
-            <div class="metric-icon">₹</div>
-            <div class="metric-content">
-                <h3 class="metric-value" id="today-revenue">₹0.00</h3>
-                <p class="metric-label">Revenue</p>
+        <?php if (Auth::hasRole('Admin') || Auth::hasRole('Manager')): ?>
+            <div class="metric-card card">
+                <div class="metric-icon">₹</div>
+                <div class="metric-content">
+                    <h3 class="metric-value" id="today-revenue">₹0.00</h3>
+                    <p class="metric-label">Revenue</p>
+                </div>
             </div>
-        </div>
+        <?php endif; ?>
         <div class="metric-card card">
             <div class="metric-icon">👥</div>
             <div class="metric-content">
@@ -75,46 +77,50 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 
     <!-- Charts -->
-    <section id="charts-section">
-        <div class="charts-grid">
-            <!-- Revenue Chart -->
-            <div class="chart-card">
-                <h3>Revenue Chart</h3>
-                <canvas id="revenue-chart"></canvas>
-            </div>
+    <?php if (Auth::hasRole('Admin') || Auth::hasRole('Manager')): ?>
+        <section id="charts-section">
+            <div class="charts-grid">
+                <!-- Revenue Chart -->
+                <div class="chart-card">
+                    <h3>Revenue Chart</h3>
+                    <canvas id="revenue-chart"></canvas>
+                </div>
 
-            <!-- Peak Hour Usage -->
-            <div class="chart-card">
-                <h3>Peak Hour Usage</h3>
-                <canvas id="peak-hour-chart"></canvas>
-            </div>
+                <!-- Peak Hour Usage -->
+                <div class="chart-card">
+                    <h3>Peak Hour Usage</h3>
+                    <canvas id="peak-hour-chart"></canvas>
+                </div>
 
-            <!-- Customer Trend -->
-            <div class="chart-card">
-                <h3>Customer Trend</h3>
-                <canvas id="customer-trend-chart"></canvas>
-            </div>
+                <!-- Customer Trend -->
+                <div class="chart-card">
+                    <h3>Customer Trend</h3>
+                    <canvas id="customer-trend-chart"></canvas>
+                </div>
 
-            <!-- Revenue Split -->
-            <div class="chart-card">
-                <h3>Revenue Split</h3>
-                <canvas id="revenue-split-chart"></canvas>
-            </div>
+                <!-- Revenue Split -->
+                <div class="chart-card">
+                    <h3>Revenue Split</h3>
+                    <canvas id="revenue-split-chart"></canvas>
+                </div>
 
-            <!-- Console Utilization -->
-            <div class="chart-card">
-                <h3>Console Utilization</h3>
-                <canvas id="console-utilization-chart"></canvas>
+                <!-- Console Utilization -->
+                <div class="chart-card">
+                    <h3>Console Utilization</h3>
+                    <canvas id="console-utilization-chart"></canvas>
+                </div>
             </div>
-        </div>
-    </section>
+        </section>
+    <?php endif; ?>
 
-    <section>
-        <div class="card activity-log-card">
-            <h3>Activity Logs</h3>
-            <ul id="activity-log" class="activity-log"></ul>
-        </div>
-    </section>
+    <?php if (Auth::hasRole('Admin') || Auth::hasRole('Manager')): ?>
+        <section>
+            <div class="card activity-log-card">
+                <h3>Activity Logs</h3>
+                <ul id="activity-log" class="activity-log"></ul>
+            </div>
+        </section>
+    <?php endif; ?>
 </section>
 
 <!-- Include Chart.js -->
@@ -131,7 +137,13 @@ require_once __DIR__ . '/../includes/header.php';
             .then(result => {
                 if (result.success) {
                     const data = result.data;
-                    document.getElementById('today-revenue').textContent = '₹' + parseFloat(data.revenue || 0).toFixed(2);
+
+                    // Only update revenue if the element exists (Admin/Manager only)
+                    const revenueElement = document.getElementById('today-revenue');
+                    if (revenueElement) {
+                        revenueElement.textContent = '₹' + parseFloat(data.revenue || 0).toFixed(2);
+                    }
+
                     document.getElementById('today-customers').textContent = data.customers || 0;
                     document.getElementById('active-consoles').textContent = data.active_consoles || 0;
                     document.getElementById('peak-hours').textContent = data.peak_hour || '--';
@@ -145,8 +157,10 @@ require_once __DIR__ . '/../includes/header.php';
             })
             .catch(err => console.error('Error loading stats:', err));
 
-        // Load charts data
-        loadCharts();
+        // Load charts data only for Admin/Manager
+        if (USER_ROLE === 'Admin' || USER_ROLE === 'Manager') {
+            loadCharts();
+        }
     }
 
     // Load charts
@@ -394,19 +408,26 @@ require_once __DIR__ . '/../includes/header.php';
 
     // Load activity logs
     function loadActivityLogs() {
+        // Only load activity logs for Admin/Manager
+        if (USER_ROLE !== 'Admin' && USER_ROLE !== 'Manager') {
+            return;
+        }
+
         fetch(`${SITE_URL}/api/dashboard.php?action=activity-logs&limit=10`)
             .then(res => res.json())
             .then(result => {
                 if (result.success) {
                     const logList = document.getElementById('activity-log');
-                    logList.innerHTML = '';
+                    if (logList) {
+                        logList.innerHTML = '';
 
-                    result.data.forEach(log => {
-                        const li = document.createElement('li');
-                        const time = new Date(log.created_at).toLocaleString();
-                        li.innerHTML = `<strong>${log.user_name || 'System'}</strong> - ${log.description || log.action} <span class="log-time">${time}</span>`;
-                        logList.appendChild(li);
-                    });
+                        result.data.forEach(log => {
+                            const li = document.createElement('li');
+                            const time = new Date(log.created_at).toLocaleString();
+                            li.innerHTML = `<strong>${log.user_name || 'System'}</strong> - ${log.description || log.action} <span class="log-time">${time}</span>`;
+                            logList.appendChild(li);
+                        });
+                    }
                 }
             })
             .catch(err => console.error('Error loading logs:', err));
@@ -422,5 +443,32 @@ require_once __DIR__ . '/../includes/header.php';
         loadActivityLogs();
     }, 30000);
 </script>
+
+<style>
+    /* Staff-specific dashboard styling */
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    /* Ensure proper spacing when charts are hidden */
+    #charts-section {
+        margin-bottom: 30px;
+    }
+
+    .activity-log-card {
+        margin-top: 20px;
+    }
+
+    /* Responsive adjustments for staff view */
+    @media (max-width: 768px) {
+        .metrics-grid {
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+    }
+</style>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
