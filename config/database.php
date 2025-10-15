@@ -16,6 +16,9 @@ class Database
             }
 
             $this->conn->set_charset("utf8mb4");
+
+            // Ensure MySQL session uses IST (+05:30) so NOW()/CURRENT_TIMESTAMP are correct
+            $this->conn->query("SET time_zone = '+05:30'");
         } catch (Exception $e) {
             die("Database connection error: " . $e->getMessage());
         }

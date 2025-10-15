@@ -765,8 +765,9 @@ class SessionManager
         $session_id = $input['session_id'] ?? null;
         $payment_method = $input['payment_method'] ?? '';
         $coupon_code = $input['coupon_code'] ?? null;
-        $discount_amount = $input['discount_amount'] ?? 0;
-        $final_amount = $input['final_amount'] ?? 0;
+        // Ignore client-sent discount/final amounts; compute server-side to ensure coupon applies only to gaming
+        $discount_amount = 0;
+        $final_amount = 0;
         $payment_details = $input['payment_details'] ?? null;
 
         if (!$session_id || !$payment_method) {
@@ -777,17 +778,64 @@ class SessionManager
         $this->db->begin_transaction();
 
         try {
-            // Update session with payment details
+            // Read authoritative amounts from the transaction created at session end
+            $txStmt = $this->db->prepare("SELECT gaming_amount, fandd_amount, tax_amount FROM transactions WHERE session_id = ? LIMIT 1");
+            $txStmt->bind_param("i", $session_id);
+            $txStmt->execute();
+            $tx = $txStmt->get_result()->fetch_assoc();
+
+            if (!$tx) {
+                throw new Exception('Transaction not found for session');
+            }
+
+            $gaming_amount = floatval($tx['gaming_amount'] ?? 0);
+            $fandd_amount = floatval($tx['fandd_amount'] ?? 0);
+            $tax_amount = floatval($tx['tax_amount'] ?? 0);
+
+            // Compute discount only on gaming amount
+            $computed_discount = 0.0;
+            if ($coupon_code) {
+                $couponStmt = $this->db->prepare("SELECT * FROM coupons WHERE code = ? AND status = 'Active' LIMIT 1");
+                $couponStmt->bind_param("s", $coupon_code);
+                $couponStmt->execute();
+                $coupon = $couponStmt->get_result()->fetch_assoc();
+
+                if ($coupon) {
+                    $today = date('Y-m-d');
+                    if (($coupon['valid_from'] && $coupon['valid_from'] > $today) || ($coupon['valid_to'] && $coupon['valid_to'] < $today)) {
+                        throw new Exception('Coupon is not valid today');
+                    }
+                    if ($coupon['usage_limit'] > 0 && $coupon['times_used'] >= $coupon['usage_limit']) {
+                        throw new Exception('Coupon usage limit reached');
+                    }
+                    if ($gaming_amount < floatval($coupon['min_order_amount'])) {
+                        throw new Exception('Minimum gaming amount not met for coupon');
+                    }
+
+                    if ($coupon['discount_type'] === 'percentage') {
+                        $computed_discount = ($gaming_amount * floatval($coupon['discount_value'])) / 100.0;
+                    } elseif ($coupon['discount_type'] === 'flat') {
+                        $computed_discount = min(floatval($coupon['discount_value']), $gaming_amount);
+                    } elseif ($coupon['discount_type'] === 'time_bonus') {
+                        $computed_discount = 0.0; // time bonus handled as extra minutes, not monetary here
+                    }
+                }
+            }
+
+            $discount_amount = round($computed_discount, 2);
+            $final_amount = round(($gaming_amount - $discount_amount) + $fandd_amount + $tax_amount, 2);
+
+            // Update session with payment details (authoritative server-side amounts)
             $stmt = $this->db->prepare("
-                UPDATE gaming_sessions 
-                SET payment_method = ?, 
-                    coupon_code = ?, 
-                    discount_amount = ?, 
-                    final_amount = ?,
-                    payment_status = 'completed',
-                    payment_date = NOW()
-                WHERE id = ?
-            ");
+				UPDATE gaming_sessions 
+				SET payment_method = ?, 
+					coupon_code = ?, 
+					discount_amount = ?, 
+					final_amount = ?,
+					payment_status = 'completed',
+					payment_date = NOW()
+				WHERE id = ?
+			");
             $stmt->bind_param("ssddi", $payment_method, $coupon_code, $discount_amount, $final_amount, $session_id);
 
             if (!$stmt->execute()) {
@@ -797,30 +845,31 @@ class SessionManager
             // Update transaction record with payment details
             $payment_details_json = $payment_details ? json_encode($payment_details) : null;
             $stmt = $this->db->prepare("
-                UPDATE transactions 
-                SET payment_method = ?, 
-                    coupon_code = ?, 
-                    discount_amount = ?, 
-                    final_amount = ?,
-                    payment_details = ?,
-                    payment_status = 'completed',
-                    payment_date = NOW()
-                WHERE session_id = ?
-            ");
-            $stmt->bind_param("ssddsi", $payment_method, $coupon_code, $discount_amount, $final_amount, $payment_details_json, $session_id);
+				UPDATE transactions 
+				SET payment_method = ?, 
+					coupon_code = ?, 
+					discount_amount = ?, 
+					final_amount = ?,
+					total_amount = ?,
+					payment_details = ?,
+					payment_status = 'completed',
+					payment_date = NOW()
+				WHERE session_id = ?
+			");
+            $stmt->bind_param("ssddssi", $payment_method, $coupon_code, $discount_amount, $final_amount, $final_amount, $payment_details_json, $session_id);
 
             if (!$stmt->execute()) {
                 throw new Exception('Failed to update transaction payment details');
             }
 
             // If coupon was used, mark it as used
-            if ($coupon_code) {
+            if ($coupon_code && $discount_amount > 0) {
                 $stmt = $this->db->prepare("
-                    UPDATE coupons 
-                    SET usage_count = usage_count + 1,
-                        last_used_at = NOW()
-                    WHERE code = ? AND status = 'active'
-                ");
+					UPDATE coupons 
+					SET usage_count = usage_count + 1,
+						last_used_at = NOW()
+					WHERE code = ? AND status = 'active'
+				");
                 $stmt->bind_param("s", $coupon_code);
                 $stmt->execute();
             }
@@ -836,7 +885,8 @@ class SessionManager
                 'data' => [
                     'session_id' => $session_id,
                     'payment_method' => $payment_method,
-                    'final_amount' => $final_amount
+                    'final_amount' => $final_amount,
+                    'discount_amount' => $discount_amount
                 ]
             ];
         } catch (Exception $e) {

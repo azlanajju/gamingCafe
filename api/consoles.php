@@ -84,6 +84,13 @@ try {
                             'formatted_time' => $row['formatted_time'],
                             'is_paused' => ($row['session_status'] === 'paused')
                         ];
+
+                        // Fetch session items (Food & Drinks) for display on cards
+                        $itemsStmt = $db->prepare("SELECT id, item_name, quantity, total_price FROM session_items WHERE session_id = ? ORDER BY id DESC");
+                        $itemsStmt->bind_param("i", $row['session_id']);
+                        $itemsStmt->execute();
+                        $itemsRes = $itemsStmt->get_result();
+                        $row['current_session']['items'] = $itemsRes->fetch_all(MYSQLI_ASSOC);
                     } else {
                         $row['current_session'] = null;
                     }

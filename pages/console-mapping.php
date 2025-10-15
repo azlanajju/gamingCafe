@@ -252,6 +252,10 @@ require_once __DIR__ . '/../includes/header.php';
                         <input type="radio" name="payment-method" value="cash_upi">
                         <span>Cash + UPI</span>
                     </label>
+                    <div id="cash-upi-split" class="split-inputs" style="display:none; gap:10px; margin-top:10px;">
+                        <input type="number" id="cash-amount" class="form-control" placeholder="Cash amount" min="0" step="0.01">
+                        <input type="number" id="upi-amount" class="form-control" placeholder="UPI amount" min="0" step="0.01">
+                    </div>
                 </div>
             </div>
         </div>
@@ -995,6 +999,9 @@ require_once __DIR__ . '/../includes/header.php';
 
         // Reset payment method to default
         document.querySelector('input[name="payment-method"][value="cash"]').checked = true;
+        document.getElementById('cash-upi-split').style.display = 'none';
+        document.getElementById('cash-amount').value = '';
+        document.getElementById('upi-amount').value = '';
 
         // Populate amounts
         updateBillingAmounts();
@@ -1002,6 +1009,19 @@ require_once __DIR__ . '/../includes/header.php';
         // Show modal
         document.getElementById('session-billing-modal').classList.remove('hidden');
     }
+
+    // Toggle split inputs visibility based on payment method
+    document.addEventListener('change', function(e) {
+        if (e.target && e.target.name === 'payment-method') {
+            const method = e.target.value;
+            const split = document.getElementById('cash-upi-split');
+            if (method === 'cash_upi') {
+                split.style.display = 'flex';
+            } else {
+                split.style.display = 'none';
+            }
+        }
+    });
 
     // Close Billing Modal
     function closeBillingModal() {
@@ -1058,10 +1078,9 @@ require_once __DIR__ . '/../includes/header.php';
             return;
         }
 
-        // Get current total amount for validation
+        // Use ONLY gaming amount for coupon validation
         const gamingAmount = parseFloat(currentBillingData.gaming_amount || 0);
-        const fanddAmount = parseFloat(currentBillingData.fandd_amount || 0);
-        const currentTotal = gamingAmount + fanddAmount;
+        const currentTotal = gamingAmount;
 
         // Validate coupon with the API
         fetch(`${SITE_URL}/api/coupons.php?action=validate&code=${couponCode}&amount=${currentTotal}`)
@@ -1100,10 +1119,11 @@ require_once __DIR__ . '/../includes/header.php';
         let discountAmount = 0;
         if (appliedCoupon) {
             // Calculate discount based on coupon type
+            // Coupons apply ONLY to gaming amount
             if (appliedCoupon.discount_type === 'percentage') {
-                discountAmount = (subtotal * appliedCoupon.discount_value) / 100;
+                discountAmount = (gamingAmount * appliedCoupon.discount_value) / 100;
             } else if (appliedCoupon.discount_type === 'flat') {
-                discountAmount = appliedCoupon.discount_value;
+                discountAmount = Math.min(appliedCoupon.discount_value, gamingAmount);
             }
 
             // Use the calculated discount from API if available
@@ -1112,7 +1132,7 @@ require_once __DIR__ . '/../includes/header.php';
             }
         }
 
-        const grandTotal = subtotal - discountAmount;
+        const grandTotal = (gamingAmount - discountAmount) + fanddAmount;
 
         document.getElementById('gaming-total-amount').textContent = gamingAmount.toFixed(2);
         document.getElementById('food-drinks-total-amount').textContent = fanddAmount.toFixed(2);
@@ -1129,6 +1149,22 @@ require_once __DIR__ . '/../includes/header.php';
             return;
         }
 
+        const grandTotal = parseFloat(document.getElementById('grand-total-amount').textContent);
+        let paymentDetails = null;
+        if (paymentMethod === 'cash_upi') {
+            const cash = parseFloat(document.getElementById('cash-amount').value || '0');
+            const upi = parseFloat(document.getElementById('upi-amount').value || '0');
+            const sum = Number((cash + upi).toFixed(2));
+            if (sum !== Number(grandTotal.toFixed(2))) {
+                alert(`Cash + UPI must equal Grand Total (₹${grandTotal.toFixed(2)}). Currently ₹${sum.toFixed(2)}.`);
+                return;
+            }
+            paymentDetails = {
+                cash_amount: cash,
+                upi_amount: upi
+            };
+        }
+
         // Prepare payment data
         const paymentData = {
             session_id: currentBillingData.session_id,
@@ -1137,7 +1173,8 @@ require_once __DIR__ . '/../includes/header.php';
             discount_amount: parseFloat(document.getElementById('discount-amount').textContent),
             final_amount: parseFloat(document.getElementById('grand-total-amount').textContent),
             gaming_amount: parseFloat(document.getElementById('gaming-total-amount').textContent),
-            fandd_amount: parseFloat(document.getElementById('food-drinks-total-amount').textContent)
+            fandd_amount: parseFloat(document.getElementById('food-drinks-total-amount').textContent),
+            payment_details: paymentDetails
         };
 
         console.log('Payment Data:', paymentData);
@@ -2086,6 +2123,16 @@ require_once __DIR__ . '/../includes/header.php';
     .payment-option span {
         color: var(--color-text);
         font-weight: 500;
+    }
+
+    .split-inputs {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .split-inputs .form-control {
+        flex: 1;
     }
 </style>
 
