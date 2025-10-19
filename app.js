@@ -257,7 +257,6 @@ class GameCafeApp {
   init() {
     this.waitForDOM(() => {
       this.setupEventListeners();
-      this.checkTheme();
       this.startTimers();
 
       // Debug: Check if food modal exists
@@ -760,11 +759,7 @@ class GameCafeApp {
       resetStatsBtn.addEventListener("click", () => this.resetStats());
     }
 
-    // Theme toggle
-    const themeToggle = document.getElementById("theme-toggle");
-    if (themeToggle) {
-      themeToggle.addEventListener("click", () => this.toggleTheme());
-    }
+
 
     // Logout
     const logoutBtn = document.getElementById("logout-btn");
@@ -4669,35 +4664,7 @@ class GameCafeApp {
     }, 3000);
   }
 
-  toggleTheme() {
-    const html = document.documentElement;
-    const themeToggle = document.getElementById("theme-toggle");
-    const currentTheme = html.getAttribute("data-color-scheme");
 
-    if (currentTheme === "dark") {
-      html.setAttribute("data-color-scheme", "light");
-      if (themeToggle) themeToggle.textContent = "🌙";
-    } else {
-      html.setAttribute("data-color-scheme", "dark");
-      if (themeToggle) themeToggle.textContent = "☀️";
-    }
-
-    if (this.currentSection === "dashboard") {
-      setTimeout(() => this.renderChart(), 100);
-    }
-  }
-
-  checkTheme() {
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const themeToggle = document.getElementById("theme-toggle");
-
-    if (prefersDark) {
-      document.documentElement.setAttribute("data-color-scheme", "dark");
-      if (themeToggle) themeToggle.textContent = "☀️";
-    } else {
-      if (themeToggle) themeToggle.textContent = "🌙";
-    }
-  }
 
   // Placeholder methods for remaining functionality
   renderGames() {

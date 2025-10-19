@@ -8,42 +8,11 @@ let currentUser = null;
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, initializing minimal Gaming Cafe App');
     
-    // Initialize theme toggle
-    initThemeToggle();
-    
     // Initialize any global functionality
     initGlobalFeatures();
     
     console.log('Minimal app initialization complete');
 });
-
-// Theme toggle functionality
-function initThemeToggle() {
-    const themeToggle = document.getElementById('theme-toggle');
-    if (themeToggle) {
-        // Load saved theme
-        const savedTheme = localStorage.getItem('theme') || 'light';
-        document.body.classList.toggle('dark-mode', savedTheme === 'dark');
-        updateThemeButton(savedTheme);
-        
-        themeToggle.addEventListener('click', function() {
-            const isDark = document.body.classList.contains('dark-mode');
-            const newTheme = isDark ? 'light' : 'dark';
-            
-            document.body.classList.toggle('dark-mode');
-            localStorage.setItem('theme', newTheme);
-            updateThemeButton(newTheme);
-        });
-    }
-}
-
-// Update theme button icon
-function updateThemeButton(theme) {
-    const themeToggle = document.getElementById('theme-toggle');
-    if (themeToggle) {
-        themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
-    }
-}
 
 // Initialize global features
 function initGlobalFeatures() {
@@ -88,9 +57,9 @@ document.head.appendChild(style);
 
 // Export functions for use in other scripts
 window.GameCafeMinimal = {
-    showToast: showToast,
-    initThemeToggle: initThemeToggle
+    showToast: showToast
 };
+
 
 
 

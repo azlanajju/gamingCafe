@@ -21,7 +21,6 @@ $currentUser = Auth::user();
             <div class="header-content">
                 <h1 class="header-title"><?php echo SITE_NAME; ?></h1>
                 <div class="header-actions">
-                    <button id="theme-toggle" class="btn btn--secondary btn--sm">🌙</button>
                     <div class="user-info">
                         <span id="current-user"><?php echo htmlspecialchars($currentUser['full_name']); ?></span>
                         <button id="logout-btn" class="btn btn--outline btn--sm" onclick="logout()">Logout</button>

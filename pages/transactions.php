@@ -82,7 +82,7 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="pagination-container">
             <div style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px;">
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <label for="items-per-page" style="color: #e2e8f0;">Items per page:</label>
+                    <label for="items-per-page" style="color: var(--color-text);">Items per page:</label>
                     <select id="items-per-page">
                         <option value="10" selected>10</option>
                         <option value="25">25</option>
@@ -130,15 +130,15 @@ require_once __DIR__ . '/../includes/header.php';
         font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         font-size: 14px;
         min-width: 1400px;
-        background: #1a1a1a;
+        background: var(--color-surface);
         border-radius: 8px;
         overflow: hidden;
-        border: 1px solid #333;
+        border: 1px solid var(--color-border);
     }
 
     .data-table thead {
-        background: #2d2d2d;
-        color: white;
+        background: var(--color-bg-1);
+        color: var(--color-text);
         position: relative;
     }
 
@@ -149,7 +149,7 @@ require_once __DIR__ . '/../includes/header.php';
         left: 0;
         right: 0;
         bottom: 0;
-        background: #2d2d2d;
+        background: var(--color-bg-1);
         z-index: -1;
     }
 
@@ -165,8 +165,7 @@ require_once __DIR__ . '/../includes/header.php';
         position: sticky;
         top: 0;
         z-index: 10;
-        color: white;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        color: var(--color-text);
         height: 48px;
     }
 
@@ -252,39 +251,39 @@ require_once __DIR__ . '/../includes/header.php';
 
     .data-table td {
         padding: 8px 12px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        border-bottom: 1px solid var(--color-border);
         word-wrap: break-word;
         word-break: break-word;
         white-space: normal;
         vertical-align: middle;
-        color: #e2e8f0;
+        color: var(--color-text);
         font-size: 13px;
         transition: all 0.3s ease;
         height: 48px;
     }
 
     .data-table tbody tr {
-        background: #1a1a1a;
+        background: var(--color-surface);
         transition: all 0.3s ease;
     }
 
     .data-table tbody tr:hover {
-        background: #2a2a2a;
+        background: var(--color-bg-1);
         transform: translateY(-1px);
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        box-shadow: var(--shadow-sm);
     }
 
     .data-table tbody tr:nth-child(even) {
-        background: #1f1f1f;
+        background: var(--color-bg-1);
     }
 
     .data-table tbody tr:nth-child(even):hover {
-        background: #2f2f2f;
+        background: var(--color-bg-2);
     }
 
     .data-table tfoot {
-        background: #2d2d2d;
-        color: white;
+        background: var(--color-bg-1);
+        color: var(--color-text);
         font-weight: bold;
         position: relative;
     }
@@ -296,7 +295,7 @@ require_once __DIR__ . '/../includes/header.php';
         left: 0;
         right: 0;
         bottom: 0;
-        background: #333;
+        background: var(--color-bg-1);
         z-index: -1;
     }
 
@@ -304,7 +303,6 @@ require_once __DIR__ . '/../includes/header.php';
         border-bottom: none;
         padding: 16px 12px;
         font-size: 14px;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
     }
 
     /* Compact Action Buttons */
@@ -344,7 +342,7 @@ require_once __DIR__ . '/../includes/header.php';
         justify-content: center;
         position: relative;
         overflow: hidden;
-        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+        box-shadow: var(--shadow-xs);
         min-width: 28px;
         height: 24px;
     }
@@ -356,7 +354,7 @@ require_once __DIR__ . '/../includes/header.php';
         left: -100%;
         width: 100%;
         height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        background: linear-gradient(90deg, transparent, rgba(var(--color-text-rgb, 17, 24, 39), 0.1), transparent);
         transition: left 0.5s;
     }
 
@@ -372,57 +370,57 @@ require_once __DIR__ . '/../includes/header.php';
     }
 
     .btn-primary {
-        background: #28a745;
-        color: white;
-        border: 1px solid #28a745;
+        background: var(--color-success);
+        color: var(--color-white);
+        border: 1px solid var(--color-success);
     }
 
     .btn-primary:hover {
-        background: #218838;
+        background: var(--color-success);
         transform: translateY(-2px);
-        box-shadow: 0 4px 16px rgba(40, 167, 69, 0.4);
+        box-shadow: var(--shadow-md);
     }
 
     .btn-warning {
-        background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
-        color: white;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: var(--color-warning);
+        color: var(--color-white);
+        border: 1px solid var(--color-warning);
     }
 
     .btn-warning:hover {
-        background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+        background: var(--color-warning);
         transform: translateY(-2px);
-        box-shadow: 0 4px 16px rgba(237, 137, 54, 0.4);
+        box-shadow: var(--shadow-md);
     }
 
     .btn-info {
-        background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%);
-        color: white;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: var(--color-info);
+        color: var(--color-white);
+        border: 1px solid var(--color-info);
     }
 
     .btn-info:hover {
-        background: linear-gradient(135deg, #3182ce 0%, #2c5aa0 100%);
+        background: var(--color-info);
         transform: translateY(-2px);
-        box-shadow: 0 4px 16px rgba(66, 153, 225, 0.4);
+        box-shadow: var(--shadow-md);
     }
 
     .btn-danger {
-        background: linear-gradient(135deg, #fc8181 0%, #e53e3e 100%);
-        color: white;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: var(--color-error);
+        color: var(--color-white);
+        border: 1px solid var(--color-error);
     }
 
     .btn-danger:hover {
-        background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+        background: var(--color-error);
         transform: translateY(-2px);
-        box-shadow: 0 4px 16px rgba(229, 62, 62, 0.4);
+        box-shadow: var(--shadow-md);
     }
 
     .btn-secondary {
-        background: #495057;
-        color: white;
-        border: 1px solid #495057;
+        background: var(--color-secondary);
+        color: var(--color-text);
+        border: 1px solid var(--color-border);
         font-size: 9px;
         padding: 4px 8px;
         min-width: 35px;
@@ -430,9 +428,9 @@ require_once __DIR__ . '/../includes/header.php';
     }
 
     .btn-secondary:hover {
-        background: #343a40;
+        background: var(--color-secondary-hover);
         transform: translateY(-1px);
-        box-shadow: 0 2px 8px rgba(73, 80, 87, 0.4);
+        box-shadow: var(--shadow-xs);
     }
 
     /* Beautiful Transaction Toolbar */
@@ -441,8 +439,8 @@ require_once __DIR__ . '/../includes/header.php';
         justify-content: space-between;
         align-items: center;
         padding: 15px 20px;
-        background: #1a1a1a;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        background: var(--color-surface);
+        border-bottom: 1px solid var(--color-border);
         flex-shrink: 0;
         z-index: 100;
     }
@@ -467,25 +465,24 @@ require_once __DIR__ . '/../includes/header.php';
 
     .search-input {
         padding: 12px 40px 12px 16px;
-        border: 2px solid rgba(255, 255, 255, 0.1);
+        border: 2px solid var(--color-border);
         border-radius: 12px;
         font-size: 14px;
         width: 280px;
-        background: rgba(255, 255, 255, 0.05);
-        color: #e2e8f0;
+        background: var(--color-surface);
+        color: var(--color-text);
         transition: all 0.3s ease;
-        backdrop-filter: blur(10px);
     }
 
     .search-input::placeholder {
-        color: rgba(226, 232, 240, 0.6);
+        color: var(--color-text-secondary);
     }
 
     .search-input:focus {
         outline: none;
-        border-color: #28a745;
-        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.2);
-        background: rgba(255, 255, 255, 0.08);
+        border-color: var(--color-primary);
+        box-shadow: var(--focus-ring);
+        background: var(--color-surface);
     }
 
     .clear-btn {
@@ -494,7 +491,7 @@ require_once __DIR__ . '/../includes/header.php';
         background: none;
         border: none;
         font-size: 18px;
-        color: rgba(226, 232, 240, 0.6);
+        color: var(--color-text-secondary);
         cursor: pointer;
         padding: 0;
         width: 24px;
@@ -507,42 +504,41 @@ require_once __DIR__ . '/../includes/header.php';
     }
 
     .clear-btn:hover {
-        color: #ff6b6b;
-        background: rgba(255, 107, 107, 0.1);
+        color: var(--color-error);
+        background: rgba(var(--color-error-rgb), 0.1);
         transform: scale(1.1);
     }
 
     /* Enhanced stats display */
     .transaction-toolbar span {
         padding: 8px 15px !important;
-        background: #2d2d2d !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        color: #e2e8f0 !important;
+        background: var(--color-bg-1) !important;
+        border: 1px solid var(--color-border) !important;
+        color: var(--color-text) !important;
         border-radius: 8px !important;
     }
 
     /* Enhanced select styling */
     #items-per-page {
         padding: 8px 12px;
-        border: 2px solid rgba(255, 255, 255, 0.1);
+        border: 2px solid var(--color-border);
         border-radius: 8px;
-        background: rgba(255, 255, 255, 0.05);
-        color: #e2e8f0;
+        background: var(--color-surface);
+        color: var(--color-text);
         font-size: 14px;
         transition: all 0.3s ease;
-        backdrop-filter: blur(10px);
     }
 
     #items-per-page:focus {
         outline: none;
-        border-color: #28a745;
-        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.2);
+        border-color: var(--color-primary);
+        box-shadow: var(--focus-ring);
     }
 
     /* Pagination Container */
     .pagination-container {
-        background: #1a1a1a;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        background: var(--color-surface);
+        border-top: 1px solid var(--color-border);
         flex-shrink: 0;
         z-index: 100;
     }
@@ -550,82 +546,78 @@ require_once __DIR__ . '/../includes/header.php';
     .pagination-btn {
         padding: 8px 14px;
         margin: 0 3px;
-        border: 2px solid rgba(255, 255, 255, 0.1);
+        border: 2px solid var(--color-border);
         border-radius: 8px;
-        background: rgba(255, 255, 255, 0.05);
-        color: #e2e8f0;
+        background: var(--color-surface);
+        color: var(--color-text);
         cursor: pointer;
         font-size: 14px;
         font-weight: 500;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        backdrop-filter: blur(10px);
     }
 
     .pagination-btn:hover:not(:disabled) {
-        background: #2d2d2d;
-        border-color: #28a745;
+        background: var(--color-bg-1);
+        border-color: var(--color-primary);
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        box-shadow: var(--shadow-sm);
     }
 
     .pagination-btn:disabled {
         opacity: 0.4;
         cursor: not-allowed;
-        background: rgba(255, 255, 255, 0.02);
+        background: var(--color-bg-1);
     }
 
     /* Pagination info styling */
     .pagination-info {
-        color: #e2e8f0;
+        color: var(--color-text);
         font-weight: 500;
     }
 
     /* Filter select styling */
     .filter-select {
         padding: 8px 12px;
-        border: 2px solid rgba(255, 255, 255, 0.1);
+        border: 2px solid var(--color-border);
         border-radius: 8px;
-        background: rgba(255, 255, 255, 0.05);
-        color: #e2e8f0;
+        background: var(--color-surface);
+        color: var(--color-text);
         font-size: 14px;
         transition: all 0.3s ease;
-        backdrop-filter: blur(10px);
         cursor: pointer;
     }
 
     .filter-select:focus {
         outline: none;
-        border-color: #28a745;
-        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.2);
+        border-color: var(--color-primary);
+        box-shadow: var(--focus-ring);
     }
 
     .filter-select option {
-        background: #1a1a2e;
-        color: #e2e8f0;
+        background: var(--color-surface);
+        color: var(--color-text);
     }
 
     /* Date input styling */
     .date-input {
         padding: 8px 12px;
-        border: 2px solid rgba(255, 255, 255, 0.1);
+        border: 2px solid var(--color-border);
         border-radius: 8px;
-        background: rgba(255, 255, 255, 0.05);
-        color: #e2e8f0;
+        background: var(--color-surface);
+        color: var(--color-text);
         font-size: 14px;
         transition: all 0.3s ease;
-        backdrop-filter: blur(10px);
         cursor: pointer;
     }
 
     .date-input:focus {
         outline: none;
-        border-color: #28a745;
-        box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.2);
+        border-color: var(--color-primary);
+        box-shadow: var(--focus-ring);
     }
 
     /* Color scheme for date picker */
     .date-input::-webkit-calendar-picker-indicator {
-        filter: invert(1);
         cursor: pointer;
     }
 
@@ -640,25 +632,24 @@ require_once __DIR__ . '/../includes/header.php';
     }
 
     .section-title {
-        color: #e2e8f0;
+        color: var(--color-text);
         font-size: 28px;
         font-weight: 700;
         margin: 0;
-
     }
 
     .section-header span {
         padding: 12px 20px;
-        background: #2d2d2d;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: var(--color-bg-1);
+        border: 1px solid var(--color-border);
         border-radius: 8px;
         font-weight: 600;
-        color: #e2e8f0;
+        color: var(--color-text);
     }
 
     /* Card styling */
     .card {
-        background: #1a1a1a;
+        background: var(--color-surface);
         border-radius: 0;
         box-shadow: none;
         border: none;

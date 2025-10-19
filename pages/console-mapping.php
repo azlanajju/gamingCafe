@@ -1357,7 +1357,7 @@ require_once __DIR__ . '/../includes/header.php';
         return `
             <div class="receipt">
                 <div class="receipt-header">
-                    <img src="assets/logo.png" alt="GameBot Gaming Cafe Logo" class="receipt-logo">
+                    <img src="../assets/logo.png" alt="GameBot Gaming Cafe Logo" class="receipt-logo">
                     <h1 class="receipt-title">GameBot Gaming Cafe</h1>
                     <div class="receipt-divider"></div>
                 </div>
@@ -1447,27 +1447,27 @@ require_once __DIR__ . '/../includes/header.php';
 <style>
     /* Console Mapping Page - Dark Theme */
     body {
-        background-color: #1A1A1A !important;
+        background-color: var(--color-background) !important;
     }
 
     .main-content {
-        background-color: #1A1A1A !important;
+        background-color: var(--color-background) !important;
     }
 
     .section-header {
-        background-color: #1A1A1A !important;
+        background-color: var(--color-background) !important;
     }
 
     .section-title {
-        color: #ffffff !important;
+        color: var(--color-text) !important;
         font-size: 28px;
         font-weight: 700;
         margin: 0;
     }
 
     #add-console-btn {
-        background: #32B8C6 !important;
-        color: #ffffff !important;
+        background: var(--color-primary) !important;
+        color: var(--color-btn-primary-text) !important;
         border: none;
         padding: 12px 24px;
         border-radius: 8px;
@@ -1477,7 +1477,7 @@ require_once __DIR__ . '/../includes/header.php';
     }
 
     #add-console-btn:hover {
-        background: #29A0B0 !important;
+        background: var(--color-primary-hover) !important;
     }
 
     /* Console Grid */
@@ -1490,8 +1490,8 @@ require_once __DIR__ . '/../includes/header.php';
 
     /* Console Cards */
     .console-card {
-        background: #242424 !important;
-        border: 2px solid #32B8C6;
+        background: var(--color-surface) !important;
+        border: 2px solid var(--color-primary);
         border-radius: 10px;
         padding: 16px;
         position: relative;
@@ -1503,27 +1503,27 @@ require_once __DIR__ . '/../includes/header.php';
 
     .console-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(50, 184, 198, 0.15);
+        box-shadow: var(--shadow-md);
     }
 
     .console-card.occupied {
-        border-color: rgb(159, 45, 10);
-        background: #242424 !important;
+        border-color: var(--color-warning);
+        background: var(--color-surface) !important;
     }
 
     .console-card.available {
-        border-color: #32B8C6;
-        background: #242424 !important;
+        border-color: var(--color-success);
+        background: var(--color-surface) !important;
     }
 
     .console-card.maintenance {
-        border-color: #FF4444;
-        background: #242424 !important;
+        border-color: var(--color-error);
+        background: var(--color-surface) !important;
     }
 
     .console-card.out-of-service {
-        border-color: #FF4444;
-        background: #242424 !important;
+        border-color: var(--color-error);
+        background: var(--color-surface) !important;
     }
 
     /* Console Header */
@@ -1535,7 +1535,7 @@ require_once __DIR__ . '/../includes/header.php';
     }
 
     .console-name {
-        color: #ffffff !important;
+        color: var(--color-text) !important;
         font-size: 18px;
         font-weight: 700;
         margin: 0;
@@ -1552,7 +1552,7 @@ require_once __DIR__ . '/../includes/header.php';
     .icon-btn {
         background: none;
         border: none;
-        color: #E68161;
+        color: var(--color-primary);
         cursor: pointer;
         padding: 4px;
         border-radius: 4px;
@@ -1563,17 +1563,17 @@ require_once __DIR__ . '/../includes/header.php';
     }
 
     .icon-btn:hover {
-        background: rgba(230, 129, 97, 0.1);
+        background: rgba(var(--color-primary-rgb, 59, 130, 246), 0.1);
         transform: scale(1.1);
     }
 
     .icon-btn.delete-btn {
-        color: #9CA3AF;
+        color: var(--color-error);
     }
 
     .icon-btn.delete-btn:hover {
-        background: rgba(156, 163, 175, 0.1);
-        color: #ffffff;
+        background: rgba(var(--color-error-rgb), 0.1);
+        color: var(--color-error);
     }
 
     /* Console Status */
@@ -1588,28 +1588,28 @@ require_once __DIR__ . '/../includes/header.php';
     }
 
     .console-status.available {
-        background: #32B8C6;
-        color: #ffffff;
+        background: var(--color-success);
+        color: var(--color-white);
     }
 
     .console-status.occupied {
-        background: #D2691E;
-        color: #ffffff;
+        background: var(--color-warning);
+        color: var(--color-white);
     }
 
     .console-status.maintenance {
-        background: #DC143C;
-        color: #ffffff;
+        background: var(--color-error);
+        color: var(--color-white);
     }
 
     .console-status.out-of-service {
-        background: #FF4444;
-        color: #ffffff;
+        background: var(--color-error);
+        color: var(--color-white);
     }
 
     /* Console Specs */
     .console-specs {
-        color: #D1D5DB !important;
+        color: var(--color-text-secondary) !important;
         font-size: 13px;
         margin-bottom: 6px;
         line-height: 1.3;
@@ -1617,7 +1617,7 @@ require_once __DIR__ . '/../includes/header.php';
 
     /* Console Meta */
     .console-meta {
-        color: #9CA3AF !important;
+        color: var(--color-text-secondary) !important;
         font-size: 11px;
         margin-bottom: 16px;
         line-height: 1.3;
@@ -1625,7 +1625,7 @@ require_once __DIR__ . '/../includes/header.php';
 
     /* Occupied Session */
     .occupied-session {
-        background: #5C3A2E !important;
+        background: #17893bff !important;
         border-radius: 6px;
         padding: 12px;
         margin-bottom: 16px;
@@ -1635,11 +1635,11 @@ require_once __DIR__ . '/../includes/header.php';
     .session-timer {
         font-size: 28px;
         font-weight: 700;
-        color: #32B8C6 !important;
+        color: #fff !important;
         text-align: center;
         margin-bottom: 12px;
         font-family: 'Courier New', monospace;
-        background: #3d2c20;
+        background: #007610ff;
         padding: 8px;
         border-radius: 6px;
     }

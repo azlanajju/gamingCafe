@@ -1,83 +1,88 @@
 :root {
-  /* Primitive Color Tokens */
+  /* Primitive Color Tokens - White Theme Only */
   --color-white: rgba(255, 255, 255, 1);
   --color-black: rgba(0, 0, 0, 1);
-  --color-cream-50: rgba(252, 252, 249, 1);
-  --color-cream-100: rgba(255, 255, 253, 1);
-  --color-gray-200: rgba(245, 245, 245, 1);
-  --color-gray-300: rgba(167, 169, 169, 1);
-  --color-gray-400: rgba(119, 124, 124, 1);
-  --color-slate-500: rgba(98, 108, 113, 1);
-  --color-brown-600: rgba(94, 82, 64, 1);
-  --color-charcoal-700: rgba(31, 33, 33, 1);
-  --color-charcoal-800: rgba(38, 40, 40, 1);
-  --color-slate-900: rgba(19, 52, 59, 1);
-  --color-teal-300: rgba(50, 184, 198, 1);
-  --color-teal-400: rgba(45, 166, 178, 1);
-  --color-teal-500: rgba(33, 128, 141, 1);
-  --color-teal-600: rgba(29, 116, 128, 1);
-  --color-teal-700: rgba(26, 104, 115, 1);
-  --color-teal-800: rgba(41, 150, 161, 1);
-  --color-red-400: rgba(255, 84, 89, 1);
-  --color-red-500: rgba(192, 21, 47, 1);
-  --color-orange-400: rgba(230, 129, 97, 1);
-  --color-orange-500: rgba(168, 75, 47, 1);
+  --color-gray-50: rgba(249, 250, 251, 1);
+  --color-gray-100: rgba(243, 244, 246, 1);
+  --color-gray-200: rgba(229, 231, 235, 1);
+  --color-gray-300: rgba(209, 213, 219, 1);
+  --color-gray-400: rgba(156, 163, 175, 1);
+  --color-gray-500: rgba(107, 114, 128, 1);
+  --color-gray-600: rgba(75, 85, 99, 1);
+  --color-gray-700: rgba(55, 65, 81, 1);
+  --color-gray-800: rgba(31, 41, 55, 1);
+  --color-gray-900: rgba(17, 24, 39, 1);
+  --color-blue-500: rgba(59, 130, 246, 1);
+  --color-blue-600: rgba(37, 99, 235, 1);
+  --color-blue-700: rgba(29, 78, 216, 1);
+  --color-green-500: rgba(34, 197, 94, 1);
+  --color-green-600: rgba(22, 163, 74, 1);
+  --color-red-500: rgba(239, 68, 68, 1);
+  --color-red-600: rgba(220, 38, 38, 1);
+  --color-yellow-500: rgba(245, 158, 11, 1);
+  --color-yellow-600: rgba(217, 119, 6, 1);
 
   /* RGB versions for opacity control */
-  --color-brown-600-rgb: 94, 82, 64;
-  --color-teal-500-rgb: 33, 128, 141;
-  --color-slate-900-rgb: 19, 52, 59;
-  --color-slate-500-rgb: 98, 108, 113;
-  --color-red-500-rgb: 192, 21, 47;
-  --color-red-400-rgb: 255, 84, 89;
-  --color-orange-500-rgb: 168, 75, 47;
-  --color-orange-400-rgb: 230, 129, 97;
+  --color-gray-300-rgb: 209, 213, 219;
+  --color-blue-500-rgb: 59, 130, 246;
+  --color-gray-900-rgb: 17, 24, 39;
+  --color-gray-500-rgb: 107, 114, 128;
+  --color-red-500-rgb: 239, 68, 68;
+  --color-green-500-rgb: 34, 197, 94;
+  --color-yellow-500-rgb: 245, 158, 11;
 
-  /* Background color tokens (Light Mode) */
-  --color-bg-1: rgba(59, 130, 246, 0.08); /* Light blue */
-  --color-bg-2: rgba(245, 158, 11, 0.08); /* Light yellow */
-  --color-bg-3: rgba(34, 197, 94, 0.08); /* Light green */
-  --color-bg-4: rgba(239, 68, 68, 0.08); /* Light red */
-  --color-bg-5: rgba(147, 51, 234, 0.08); /* Light purple */
-  --color-bg-6: rgba(249, 115, 22, 0.08); /* Light orange */
-  --color-bg-7: rgba(236, 72, 153, 0.08); /* Light pink */
-  --color-bg-8: rgba(6, 182, 212, 0.08); /* Light cyan */
+  /* Background color tokens - Light subtle colors */
+  --color-bg-1: rgba(59, 130, 246, 0.05);
+  /* Very light blue */
+  --color-bg-2: rgba(245, 158, 11, 0.05);
+  /* Very light yellow */
+  --color-bg-3: rgba(34, 197, 94, 0.05);
+  /* Very light green */
+  --color-bg-4: rgba(239, 68, 68, 0.05);
+  /* Very light red */
+  --color-bg-5: rgba(147, 51, 234, 0.05);
+  /* Very light purple */
+  --color-bg-6: rgba(249, 115, 22, 0.05);
+  /* Very light orange */
+  --color-bg-7: rgba(236, 72, 153, 0.05);
+  /* Very light pink */
+  --color-bg-8: rgba(6, 182, 212, 0.05);
+  /* Very light cyan */
 
-  /* Semantic Color Tokens (Light Mode) */
-  --color-background: var(--color-cream-50);
-  --color-surface: var(--color-cream-100);
-  --color-text: var(--color-slate-900);
-  --color-text-secondary: var(--color-slate-500);
-  --color-primary: var(--color-teal-500);
-  --color-primary-hover: var(--color-teal-600);
-  --color-primary-active: var(--color-teal-700);
-  --color-secondary: rgba(var(--color-brown-600-rgb), 0.12);
-  --color-secondary-hover: rgba(var(--color-brown-600-rgb), 0.2);
-  --color-secondary-active: rgba(var(--color-brown-600-rgb), 0.25);
-  --color-border: rgba(var(--color-brown-600-rgb), 0.2);
-  --color-btn-primary-text: var(--color-cream-50);
-  --color-card-border: rgba(var(--color-brown-600-rgb), 0.12);
-  --color-card-border-inner: rgba(var(--color-brown-600-rgb), 0.12);
+  /* Semantic Color Tokens - White Theme */
+  --color-background: var(--color-white);
+  --color-surface: var(--color-gray-50);
+  --color-text: var(--color-gray-900);
+  --color-text-secondary: var(--color-gray-500);
+  --color-primary: var(--color-blue-500);
+  --color-primary-hover: var(--color-blue-600);
+  --color-primary-active: var(--color-blue-700);
+  --color-secondary: var(--color-gray-100);
+  --color-secondary-hover: var(--color-gray-200);
+  --color-secondary-active: var(--color-gray-300);
+  --color-border: var(--color-gray-300);
+  --color-btn-primary-text: var(--color-white);
+  --color-card-border: var(--color-gray-200);
+  --color-card-border-inner: var(--color-gray-200);
   --color-error: var(--color-red-500);
-  --color-success: var(--color-teal-500);
-  --color-warning: var(--color-orange-500);
-  --color-info: var(--color-slate-500);
-  --color-focus-ring: rgba(var(--color-teal-500-rgb), 0.4);
-  --color-select-caret: rgba(var(--color-slate-900-rgb), 0.8);
+  --color-success: var(--color-green-500);
+  --color-warning: var(--color-yellow-500);
+  --color-info: var(--color-gray-500);
+  --color-focus-ring: rgba(var(--color-blue-500-rgb), 0.3);
+  --color-select-caret: rgba(var(--color-gray-900-rgb), 0.8);
 
   /* Common style patterns */
   --focus-ring: 0 0 0 3px var(--color-focus-ring);
   --focus-outline: 2px solid var(--color-primary);
-  --status-bg-opacity: 0.15;
-  --status-border-opacity: 0.25;
-  --select-caret-light: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23134252' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-  --select-caret-dark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f5f5f5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  --status-bg-opacity: 0.1;
+  --status-border-opacity: 0.2;
+  --select-caret: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23111827' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
 
   /* RGB versions for opacity control */
-  --color-success-rgb: 33, 128, 141;
-  --color-error-rgb: 192, 21, 47;
-  --color-warning-rgb: 168, 75, 47;
-  --color-info-rgb: 98, 108, 113;
+  --color-success-rgb: var(--color-green-500-rgb);
+  --color-error-rgb: var(--color-red-500-rgb);
+  --color-warning-rgb: var(--color-yellow-500-rgb);
+  --color-info-rgb: var(--color-gray-500-rgb);
 
   /* Typography */
   --font-family-base: "FKGroteskNeue", "Geist", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -139,156 +144,9 @@
   --container-xl: 1280px;
 }
 
-/* Dark mode colors */
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* RGB versions for opacity control (Dark Mode) */
-    --color-gray-400-rgb: 119, 124, 124;
-    --color-teal-300-rgb: 50, 184, 198;
-    --color-gray-300-rgb: 167, 169, 169;
-    --color-gray-200-rgb: 245, 245, 245;
 
-    /* Background color tokens (Dark Mode) */
-    --color-bg-1: rgba(29, 78, 216, 0.15); /* Dark blue */
-    --color-bg-2: rgba(180, 83, 9, 0.15); /* Dark yellow */
-    --color-bg-3: rgba(21, 128, 61, 0.15); /* Dark green */
-    --color-bg-4: rgba(185, 28, 28, 0.15); /* Dark red */
-    --color-bg-5: rgba(107, 33, 168, 0.15); /* Dark purple */
-    --color-bg-6: rgba(194, 65, 12, 0.15); /* Dark orange */
-    --color-bg-7: rgba(190, 24, 93, 0.15); /* Dark pink */
-    --color-bg-8: rgba(8, 145, 178, 0.15); /* Dark cyan */
 
-    /* Semantic Color Tokens (Dark Mode) */
-    --color-background: var(--color-charcoal-700);
-    --color-surface: var(--color-charcoal-800);
-    --color-text: var(--color-gray-200);
-    --color-text-secondary: rgba(var(--color-gray-300-rgb), 0.7);
-    --color-primary: var(--color-teal-300);
-    --color-primary-hover: var(--color-teal-400);
-    --color-primary-active: var(--color-teal-800);
-    --color-secondary: rgba(var(--color-gray-400-rgb), 0.15);
-    --color-secondary-hover: rgba(var(--color-gray-400-rgb), 0.25);
-    --color-secondary-active: rgba(var(--color-gray-400-rgb), 0.3);
-    --color-border: rgba(var(--color-gray-400-rgb), 0.3);
-    --color-error: var(--color-red-400);
-    --color-success: var(--color-teal-300);
-    --color-warning: var(--color-orange-400);
-    --color-info: var(--color-gray-300);
-    --color-focus-ring: rgba(var(--color-teal-300-rgb), 0.4);
-    --color-btn-primary-text: var(--color-slate-900);
-    --color-card-border: rgba(var(--color-gray-400-rgb), 0.2);
-    --color-card-border-inner: rgba(var(--color-gray-400-rgb), 0.15);
-    --shadow-inset-sm: inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.15);
-    --button-border-secondary: rgba(var(--color-gray-400-rgb), 0.2);
-    --color-border-secondary: rgba(var(--color-gray-400-rgb), 0.2);
-    --color-select-caret: rgba(var(--color-gray-200-rgb), 0.8);
 
-    /* Common style patterns - updated for dark mode */
-    --focus-ring: 0 0 0 3px var(--color-focus-ring);
-    --focus-outline: 2px solid var(--color-primary);
-    --status-bg-opacity: 0.15;
-    --status-border-opacity: 0.25;
-    --select-caret-light: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23134252' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-    --select-caret-dark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f5f5f5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-
-    /* RGB versions for dark mode */
-    --color-success-rgb: var(--color-teal-300-rgb);
-    --color-error-rgb: var(--color-red-400-rgb);
-    --color-warning-rgb: var(--color-orange-400-rgb);
-    --color-info-rgb: var(--color-gray-300-rgb);
-  }
-}
-
-/* Data attribute for manual theme switching */
-[data-color-scheme="dark"] {
-  /* RGB versions for opacity control (dark mode) */
-  --color-gray-400-rgb: 119, 124, 124;
-  --color-teal-300-rgb: 50, 184, 198;
-  --color-gray-300-rgb: 167, 169, 169;
-  --color-gray-200-rgb: 245, 245, 245;
-
-  /* Colorful background palette - Dark Mode */
-  --color-bg-1: rgba(29, 78, 216, 0.15); /* Dark blue */
-  --color-bg-2: rgba(180, 83, 9, 0.15); /* Dark yellow */
-  --color-bg-3: rgba(21, 128, 61, 0.15); /* Dark green */
-  --color-bg-4: rgba(185, 28, 28, 0.15); /* Dark red */
-  --color-bg-5: rgba(107, 33, 168, 0.15); /* Dark purple */
-  --color-bg-6: rgba(194, 65, 12, 0.15); /* Dark orange */
-  --color-bg-7: rgba(190, 24, 93, 0.15); /* Dark pink */
-  --color-bg-8: rgba(8, 145, 178, 0.15); /* Dark cyan */
-
-  /* Semantic Color Tokens (Dark Mode) */
-  --color-background: var(--color-charcoal-700);
-  --color-surface: var(--color-charcoal-800);
-  --color-text: var(--color-gray-200);
-  --color-text-secondary: rgba(var(--color-gray-300-rgb), 0.7);
-  --color-primary: var(--color-teal-300);
-  --color-primary-hover: var(--color-teal-400);
-  --color-primary-active: var(--color-teal-800);
-  --color-secondary: rgba(var(--color-gray-400-rgb), 0.15);
-  --color-secondary-hover: rgba(var(--color-gray-400-rgb), 0.25);
-  --color-secondary-active: rgba(var(--color-gray-400-rgb), 0.3);
-  --color-border: rgba(var(--color-gray-400-rgb), 0.3);
-  --color-error: var(--color-red-400);
-  --color-success: var(--color-teal-300);
-  --color-warning: var(--color-orange-400);
-  --color-info: var(--color-gray-300);
-  --color-focus-ring: rgba(var(--color-teal-300-rgb), 0.4);
-  --color-btn-primary-text: var(--color-slate-900);
-  --color-card-border: rgba(var(--color-gray-400-rgb), 0.15);
-  --color-card-border-inner: rgba(var(--color-gray-400-rgb), 0.15);
-  --shadow-inset-sm: inset 0 1px 0 rgba(255, 255, 255, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.15);
-  --color-border-secondary: rgba(var(--color-gray-400-rgb), 0.2);
-  --color-select-caret: rgba(var(--color-gray-200-rgb), 0.8);
-
-  /* Common style patterns - updated for dark mode */
-  --focus-ring: 0 0 0 3px var(--color-focus-ring);
-  --focus-outline: 2px solid var(--color-primary);
-  --status-bg-opacity: 0.15;
-  --status-border-opacity: 0.25;
-  --select-caret-light: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23134252' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-  --select-caret-dark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f5f5f5' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-
-  /* RGB versions for dark mode */
-  --color-success-rgb: var(--color-teal-300-rgb);
-  --color-error-rgb: var(--color-red-400-rgb);
-  --color-warning-rgb: var(--color-orange-400-rgb);
-  --color-info-rgb: var(--color-gray-300-rgb);
-}
-
-[data-color-scheme="light"] {
-  /* RGB versions for opacity control (light mode) */
-  --color-brown-600-rgb: 94, 82, 64;
-  --color-teal-500-rgb: 33, 128, 141;
-  --color-slate-900-rgb: 19, 52, 59;
-
-  /* Semantic Color Tokens (Light Mode) */
-  --color-background: var(--color-cream-50);
-  --color-surface: var(--color-cream-100);
-  --color-text: var(--color-slate-900);
-  --color-text-secondary: var(--color-slate-500);
-  --color-primary: var(--color-teal-500);
-  --color-primary-hover: var(--color-teal-600);
-  --color-primary-active: var(--color-teal-700);
-  --color-secondary: rgba(var(--color-brown-600-rgb), 0.12);
-  --color-secondary-hover: rgba(var(--color-brown-600-rgb), 0.2);
-  --color-secondary-active: rgba(var(--color-brown-600-rgb), 0.25);
-  --color-border: rgba(var(--color-brown-600-rgb), 0.2);
-  --color-btn-primary-text: var(--color-cream-50);
-  --color-card-border: rgba(var(--color-brown-600-rgb), 0.12);
-  --color-card-border-inner: rgba(var(--color-brown-600-rgb), 0.12);
-  --color-error: var(--color-red-500);
-  --color-success: var(--color-teal-500);
-  --color-warning: var(--color-orange-500);
-  --color-info: var(--color-slate-500);
-  --color-focus-ring: rgba(var(--color-teal-500-rgb), 0.4);
-
-  /* RGB versions for light mode */
-  --color-success-rgb: var(--color-teal-500-rgb);
-  --color-error-rgb: var(--color-red-500-rgb);
-  --color-warning-rgb: var(--color-orange-500-rgb);
-  --color-info-rgb: var(--color-slate-500-rgb);
-}
 
 /* Base styles */
 html {
@@ -329,18 +187,23 @@ h6 {
 h1 {
   font-size: var(--font-size-4xl);
 }
+
 h2 {
   font-size: var(--font-size-3xl);
 }
+
 h3 {
   font-size: var(--font-size-2xl);
 }
+
 h4 {
   font-size: var(--font-size-xl);
 }
+
 h5 {
   font-size: var(--font-size-lg);
 }
+
 h6 {
   font-size: var(--font-size-md);
 }
@@ -486,27 +349,11 @@ select.form-control {
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
-  background-image: var(--select-caret-light);
+  background-image: var(--select-caret);
   background-repeat: no-repeat;
   background-position: right var(--space-12) center;
   background-size: 16px;
   padding-right: var(--space-32);
-}
-
-/* Add a dark mode specific caret */
-@media (prefers-color-scheme: dark) {
-  select.form-control {
-    background-image: var(--select-caret-dark);
-  }
-}
-
-/* Also handle data-color-scheme */
-[data-color-scheme="dark"] select.form-control {
-  background-image: var(--select-caret-dark);
-}
-
-[data-color-scheme="light"] select.form-control {
-  background-image: var(--select-caret-light);
 }
 
 .form-control:focus {
@@ -597,16 +444,19 @@ select.form-control {
     max-width: var(--container-sm);
   }
 }
+
 @media (min-width: 768px) {
   .container {
     max-width: var(--container-md);
   }
 }
+
 @media (min-width: 1024px) {
   .container {
     max-width: var(--container-lg);
   }
 }
+
 @media (min-width: 1280px) {
   .container {
     max-width: var(--container-xl);
@@ -617,24 +467,31 @@ select.form-control {
 .flex {
   display: flex;
 }
+
 .flex-col {
   flex-direction: column;
 }
+
 .items-center {
   align-items: center;
 }
+
 .justify-center {
   justify-content: center;
 }
+
 .justify-between {
   justify-content: space-between;
 }
+
 .gap-4 {
   gap: var(--space-4);
 }
+
 .gap-8 {
   gap: var(--space-8);
 }
+
 .gap-16 {
   gap: var(--space-16);
 }
@@ -642,16 +499,20 @@ select.form-control {
 .m-0 {
   margin: 0;
 }
+
 .mt-8 {
   margin-top: var(--space-8);
 }
+
 .mb-8 {
   margin-bottom: var(--space-8);
 }
+
 .mx-8 {
   margin-left: var(--space-8);
   margin-right: var(--space-8);
 }
+
 .my-8 {
   margin-top: var(--space-8);
   margin-bottom: var(--space-8);
@@ -660,18 +521,22 @@ select.form-control {
 .p-0 {
   padding: 0;
 }
+
 .py-8 {
   padding-top: var(--space-8);
   padding-bottom: var(--space-8);
 }
+
 .px-8 {
   padding-left: var(--space-8);
   padding-right: var(--space-8);
 }
+
 .py-16 {
   padding-top: var(--space-16);
   padding-bottom: var(--space-16);
 }
+
 .px-16 {
   padding-left: var(--space-16);
   padding-right: var(--space-16);
@@ -680,6 +545,7 @@ select.form-control {
 .block {
   display: block;
 }
+
 .hidden {
   display: none;
 }
@@ -702,10 +568,7 @@ select.form-control {
   outline-offset: 2px;
 }
 
-/* Dark mode specifics */
-[data-color-scheme="dark"] .btn--outline {
-  border: 1px solid var(--color-border-secondary);
-}
+
 
 @font-face {
   font-family: "FKGroteskNeue";
@@ -759,7 +622,7 @@ select.form-control {
 
 .demo-info {
   color: var(--color-text-secondary);
-  background: rgba(var(--color-brown-600-rgb), 0.1);
+  background: var(--color-bg-1);
   padding: var(--space-12);
   border-radius: var(--radius-base);
   border: 1px solid var(--color-border);
@@ -823,7 +686,8 @@ select.form-control {
 }
 
 .logo {
-  max-width: 200px; /* adjust as needed */
+  max-width: 200px;
+  /* adjust as needed */
   height: auto;
 }
 
@@ -937,12 +801,12 @@ select.form-control {
   background: var(--color-surface);
 }
 
-.remember-me input[type="checkbox"]:checked + .checkmark {
+.remember-me input[type="checkbox"]:checked+.checkmark {
   background: var(--color-primary);
   border-color: var(--color-primary);
 }
 
-.remember-me input[type="checkbox"]:checked + .checkmark::after {
+.remember-me input[type="checkbox"]:checked+.checkmark::after {
   content: "";
   position: absolute;
   left: 5px;
@@ -1354,8 +1218,10 @@ select.form-control {
 }
 
 .console-status {
-  display: block; /* forces price on its own line */
-  margin-top: 24px; /* adds space above */
+  display: block;
+  /* forces price on its own line */
+  margin-top: 24px;
+  /* adds space above */
   padding: var(--space-4) var(--space-8);
   border-radius: var(--radius-full);
   font-size: var(--font-size-xs);
@@ -1421,19 +1287,14 @@ select.form-control {
   background-color: rgba(255, 235, 59, 0.1);
 }
 
-body.dark-mode .console-card.console-paused {
-  background-color: rgba(255, 235, 59, 0.15);
-  border-color: #ffd600;
+.console-card.console-paused {
+  border-color: var(--color-warning);
+  background-color: rgba(var(--color-warning-rgb), 0.1);
 }
 
 .console-status.paused {
-  background-color: rgba(255, 235, 59, 0.2);
-  color: #000;
-}
-
-body.dark-mode .console-status.paused {
-  background-color: rgba(255, 235, 59, 0.35);
-  color: #212121;
+  background-color: rgba(var(--color-warning-rgb), 0.15);
+  color: var(--color-warning);
 }
 
 /* Enhanced Session Info with Billing Segments */
@@ -1525,7 +1386,7 @@ body.dark-mode .console-status.paused {
 }
 
 .console-transfer-item.selected {
-  background: rgba(var(--color-primary-rgb, 33, 128, 141), 0.1);
+  background: rgba(var(--color-blue-500-rgb), 0.1);
   border-color: var(--color-primary);
 }
 
@@ -1687,6 +1548,7 @@ body.dark-mode .console-status.paused {
   grid-template-columns: 1fr 1fr;
   gap: var(--space-12);
 }
+
 /* Enhanced Tables */
 .table-container {
   overflow-x: auto;
@@ -1720,7 +1582,8 @@ body.dark-mode .console-status.paused {
   color: var(--color-text);
   position: sticky;
   top: 0;
-  z-index: 2; /* keep header above rows when scrolling */
+  z-index: 2;
+  /* keep header above rows when scrolling */
 }
 
 /* Table rows */
@@ -1764,8 +1627,10 @@ body.dark-mode .console-status.paused {
 }
 
 .game-rating {
-  display: block; /* forces price on its own line */
-  margin-top: 24px; /* adds space above */
+  display: block;
+  /* forces price on its own line */
+  margin-top: 24px;
+  /* adds space above */
   background: var(--color-bg-2);
   padding: var(--space-4) var(--space-8);
   border-radius: var(--radius-sm);
@@ -1830,9 +1695,12 @@ body.dark-mode .console-status.paused {
   margin: 0;
   color: var(--color-text);
 }
+
 .inventory-price {
-  display: block; /* forces price on its own line */
-  margin-top: 24px; /* adds space above */
+  display: block;
+  /* forces price on its own line */
+  margin-top: 24px;
+  /* adds space above */
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
   color: var(--color-primary);
@@ -1993,8 +1861,10 @@ body.dark-mode .console-status.paused {
 }
 
 .branch-status {
-  display: block; /* forces price on its own line */
-  margin-top: 24px; /* adds space above */
+  display: block;
+  /* forces price on its own line */
+  margin-top: 24px;
+  /* adds space above */
   padding: var(--space-4) var(--space-8);
   border-radius: var(--radius-full);
   font-size: var(--font-size-xs);
@@ -2055,6 +1925,7 @@ body.dark-mode .console-status.paused {
   display: flex;
   gap: var(--space-4);
 }
+
 /* Enhanced Price Management */
 .pricing-management-grid {
   display: grid;
@@ -2215,7 +2086,7 @@ body.dark-mode .console-status.paused {
 
 .time-checkbox.checked {
   border-color: var(--color-primary);
-  background: rgba(var(--color-teal-500-rgb), 0.1);
+  background: rgba(var(--color-blue-500-rgb), 0.1);
 }
 
 /* Form Text */
@@ -2271,7 +2142,7 @@ body.dark-mode .console-status.paused {
 
 .food-item.selected {
   border-color: var(--color-primary);
-  background: rgba(var(--color-teal-500-rgb), 0.1);
+  background: rgba(var(--color-blue-500-rgb), 0.1);
 }
 
 .food-item-name {
@@ -2496,6 +2367,7 @@ body.dark-mode .console-status.paused {
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }
@@ -2625,6 +2497,7 @@ body.dark-mode .console-status.paused {
 .radio-group input[type="radio"] {
   margin-right: 6px;
 }
+
 /* Transaction Controls */
 .transaction-toolbar {
   display: flex;
@@ -2633,7 +2506,8 @@ body.dark-mode .console-status.paused {
   gap: 12px;
   margin-bottom: 15px;
   flex-wrap: wrap;
-  margin-top: 10px; /* pushes toolbar a bit down from header */
+  margin-top: 10px;
+  /* pushes toolbar a bit down from header */
   margin-left: 10px;
 }
 
@@ -2676,7 +2550,8 @@ body.dark-mode .console-status.paused {
 .toolbar-right {
   display: flex;
   align-items: center;
-  margin-right: 30px; /* pulls search box a bit left */
+  margin-right: 30px;
+  /* pulls search box a bit left */
 }
 
 .search-box {
@@ -2764,6 +2639,7 @@ th.sorted-asc::after {
   content: " ▲";
   font-size: 0.8em;
 }
+
 th.sorted-desc::after {
   content: " ▼";
   font-size: 0.8em;
@@ -2779,7 +2655,8 @@ th.sorted-desc::after {
 
 /* Ensure all metric cards (old + new) match in size */
 .metric-card {
-  min-height: 120px; /* lock equal height */
+  min-height: 120px;
+  /* lock equal height */
   border-radius: var(--radius-lg);
   border: 1px solid var(--color-card-border);
   box-shadow: var(--shadow-sm);
@@ -2796,6 +2673,7 @@ th.sorted-desc::after {
   user-select: none;
   /* keep pointer-events enabled so the title tooltip still works */
 }
+
 /* Activity Log Section */
 .activity-log-card {
   margin-top: 1.5rem;
@@ -2821,7 +2699,8 @@ th.sorted-desc::after {
   background: var(--color-surface);
   border-radius: 8px;
   padding: 0.75rem 1rem;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08); /* you can also replace with var(--shadow-inset-sm) */
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  /* you can also replace with var(--shadow-inset-sm) */
   transition: transform 0.2s ease;
 }
 
@@ -2881,8 +2760,10 @@ th.sorted-desc::after {
 /* Blur the transactions table when locked */
 .page-locked .table-container {
   filter: blur(5px);
-  pointer-events: none; /* Prevent clicks */
-  user-select: none; /* Prevent text selection */
+  pointer-events: none;
+  /* Prevent clicks */
+  user-select: none;
+  /* Prevent text selection */
   opacity: 0.6;
   transition: filter 0.3s, opacity 0.3s;
 }
@@ -2910,7 +2791,8 @@ th.sorted-desc::after {
 
 /* Table container with fixed height */
 .table-container {
-  max-height: 500px; /* adjust height as you need */
+  max-height: 500px;
+  /* adjust height as you need */
   overflow-y: auto;
   border: 1px solid #ddd;
 }
@@ -2936,14 +2818,18 @@ th.sorted-desc::after {
 
 .blurred {
   filter: blur(7px);
-  pointer-events: none; /* optional: prevents staff from interacting with tooltips */
-  user-select: none; /* optional: prevents copying values */
-  transition: filter 0.3s ease; /* smooth effect */
+  pointer-events: none;
+  /* optional: prevents staff from interacting with tooltips */
+  user-select: none;
+  /* optional: prevents copying values */
+  transition: filter 0.3s ease;
+  /* smooth effect */
 }
 
 /* Table header */
 .data-table thead th {
-  background-color: var(--color-surface) !important; /* solid surface instead of translucent */
+  background-color: var(--color-surface) !important;
+  /* solid surface instead of translucent */
   color: var(--color-text) !important;
   font-weight: var(--font-weight-semibold);
   border-bottom: 1px solid var(--color-border);
@@ -2951,17 +2837,14 @@ th.sorted-desc::after {
 
 /* Table footer */
 .data-table tfoot td {
-  background-color: var(--color-surface) !important; /* solid surface */
+  background-color: var(--color-surface) !important;
+  /* solid surface */
   color: var(--color-text) !important;
   font-weight: var(--font-weight-semibold);
   border-top: 2px solid var(--color-border);
 }
 
-[data-color-scheme="dark"] .filter-date {
-  background: var(--color-surface);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-}
+
 
 /* Greyed-out readonly fields */
 .form-control.readonly-field {
@@ -2970,11 +2853,7 @@ th.sorted-desc::after {
   cursor: not-allowed;
 }
 
-/* Ensure dark mode support */
-[data-theme="dark"] .form-control.readonly-field {
-  background-color: var(--color-surface-dark, #2a2a2a);
-  color: var(--color-text-muted-dark, #aaa);
-}
+
 
 /* Session Items inside session-details */
 .session-items {
@@ -3008,17 +2887,11 @@ th.sorted-desc::after {
 
 .remove-item-btn:hover {
   transform: scale(1.2);
-  color: #ff1744; /* brighter red hover */
+  color: #ff1744;
+  /* brighter red hover */
 }
 
-/* Dark mode adjustments */
-body.dark-mode .session-item {
-  background: rgba(255, 255, 255, 0.05);
-}
 
-body.dark-mode .remove-item-btn {
-  color: #ff5252;
-}
 
 /* Top-right X button */
 .modal-close {
@@ -3062,14 +2935,9 @@ body.dark-mode .remove-item-btn {
   color: var(--color-text, #000);
 }
 
-/* Session Management Styles */
-.console-card.occupied {
-  border-left: 4px solid var(--color-red-500);
-}
 
-.console-card.occupied .console-header {
-  background: linear-gradient(135deg, rgba(255, 84, 89, 0.1), rgba(192, 21, 47, 0.05));
-}
+
+
 
 .session-info {
   background: var(--color-surface);
@@ -3165,19 +3033,7 @@ body.dark-mode .remove-item-btn {
   margin-right: var(--space-2);
 }
 
-/* Dark mode session styles */
-body.dark-mode .console-card.occupied {
-  border-left-color: var(--color-red-400);
-}
 
-body.dark-mode .console-card.occupied .console-header {
-  background: linear-gradient(135deg, rgba(255, 84, 89, 0.2), rgba(192, 21, 47, 0.1));
-}
-
-body.dark-mode .session-info {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.1);
-}
 
 /* Action buttons in tables */
 .action-buttons {
@@ -3222,18 +3078,4 @@ body.dark-mode .session-info {
 
 .action-buttons .btn:active {
   transform: translateY(0);
-}
-
-body.dark-mode .session-timer {
-  color: var(--color-red-400);
-  background: rgba(255, 84, 89, 0.1);
-}
-
-body.dark-mode .console-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-body.dark-mode .transfer-list {
-  border-color: rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.02);
 }

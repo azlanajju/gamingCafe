@@ -339,11 +339,11 @@ require_once __DIR__ . '/../includes/header.php';
     }
 
     .coupon-card {
-        background: 272929;
-        border: 1px solid #444;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
         border-radius: 12px;
         padding: 0;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+        box-shadow: var(--shadow-sm);
         transition: all 0.3s ease;
         position: relative;
         overflow: hidden;
@@ -351,8 +351,8 @@ require_once __DIR__ . '/../includes/header.php';
 
     .coupon-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -2px rgba(0, 0, 0, 0.3);
-        border-color: #666;
+        box-shadow: var(--shadow-md);
+        border-color: var(--color-primary);
     }
 
     .coupon-card::before {
@@ -362,7 +362,7 @@ require_once __DIR__ . '/../includes/header.php';
         left: 0;
         right: 0;
         height: 3px;
-        background: #444;
+        background: var(--color-primary);
     }
 
     /* Coupon Header */
@@ -371,7 +371,7 @@ require_once __DIR__ . '/../includes/header.php';
         justify-content: space-between;
         align-items: center;
         padding: 20px 20px 16px 20px;
-        border-bottom: 1px solid #444;
+        border-bottom: 1px solid var(--color-border);
     }
 
     .coupon-type-badge {
@@ -384,8 +384,8 @@ require_once __DIR__ . '/../includes/header.php';
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        background: #444;
-        color: #d1d5db;
+        background: var(--color-bg-1);
+        color: var(--color-text);
     }
 
     .type-icon {
@@ -409,15 +409,15 @@ require_once __DIR__ . '/../includes/header.php';
     }
 
     .status-active {
-        background: #444;
-        color: #d1d5db;
-        border: 1px solid #666;
+        background: rgba(var(--color-success-rgb), 0.1);
+        color: var(--color-success);
+        border: 1px solid var(--color-success);
     }
 
     .status-inactive {
-        background: #444;
-        color: #d1d5db;
-        border: 1px solid #666;
+        background: rgba(var(--color-error-rgb), 0.1);
+        color: var(--color-error);
+        border: 1px solid var(--color-error);
     }
 
     .status-dot {
@@ -435,7 +435,7 @@ require_once __DIR__ . '/../includes/header.php';
     .coupon-name {
         font-size: 18px;
         font-weight: 700;
-        color: #f3f4f6;
+        color: var(--color-text);
         margin: 0 0 16px 0;
         line-height: 1.3;
     }
@@ -446,15 +446,15 @@ require_once __DIR__ . '/../includes/header.php';
         gap: 8px;
         margin-bottom: 16px;
         padding: 12px 16px;
-        background: #444;
-        border: 2px dashed #666;
+        background: var(--color-bg-2);
+        border: 2px dashed var(--color-border);
         border-radius: 8px;
     }
 
     .code-label {
         font-size: 12px;
         font-weight: 600;
-        color: #9ca3af;
+        color: var(--color-text-secondary);
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
@@ -463,11 +463,11 @@ require_once __DIR__ . '/../includes/header.php';
         font-family: 'Courier New', monospace;
         font-size: 14px;
         font-weight: 700;
-        color: #f3f4f6;
-        background: 272929;
+        color: var(--color-text);
+        background: var(--color-surface);
         padding: 4px 8px;
         border-radius: 4px;
-        border: 1px solid #666;
+        border: 1px solid var(--color-border);
     }
 
     .coupon-details {
@@ -477,14 +477,14 @@ require_once __DIR__ . '/../includes/header.php';
     .coupon-details p {
         margin: 0 0 8px 0;
         font-size: 14px;
-        color: #9ca3af;
+        color: var(--color-text-secondary);
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
 
     .coupon-details strong {
-        color: #f3f4f6;
+        color: var(--color-text);
         font-weight: 600;
     }
 
@@ -496,7 +496,7 @@ require_once __DIR__ . '/../includes/header.php';
     .usage-bar {
         width: 100%;
         height: 8px;
-        background: #444;
+        background: var(--color-bg-1);
         border-radius: 4px;
         overflow: hidden;
         margin-bottom: 8px;
@@ -504,21 +504,21 @@ require_once __DIR__ . '/../includes/header.php';
 
     .usage-fill {
         height: 100%;
-        background: #666;
+        background: var(--color-primary);
         border-radius: 4px;
         transition: width 0.3s ease;
     }
 
     .usage-text {
         font-size: 12px;
-        color: #9ca3af;
+        color: var(--color-text-secondary);
         font-weight: 600;
     }
 
     /* Coupon Actions */
     .coupon-actions {
         padding: 16px 20px 20px 20px;
-        border-top: 1px solid #444;
+        border-top: 1px solid var(--color-border);
         display: flex;
         gap: 12px;
         justify-content: flex-end;
