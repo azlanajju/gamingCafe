@@ -115,6 +115,11 @@ class SessionManager
                         return $this->getSessionTime();
                     }
                     break;
+                case 'get_pre_billing_details':
+                    if ($method === 'GET') {
+                        return $this->getPreBillingDetails();
+                    }
+                    break;
                 case 'list':
                     if ($method === 'GET') {
                         return $this->getActiveSessions();
@@ -315,96 +320,40 @@ class SessionManager
             $this->db->begin_transaction();
 
             try {
-                // Update session
+                // Update session to completed and set final amounts
                 $stmt = $this->db->prepare("
                 UPDATE gaming_sessions 
                 SET status = 'completed', 
                     end_time = ?, 
                     total_amount = ?,
                     total_fandd_amount = ?,
-                    total_duration_seconds = ?
+                    total_duration_seconds = ?,
+                    payment_status = 'pending' 
                 WHERE id = ?
             ");
                 $stmt->bind_param("sdddi", $end_time, $total_amount, $fandd_total, $actual_play_time, $session['id']);
 
                 if (!$stmt->execute()) {
-                    throw new Exception('Failed to update session');
+                    throw new Exception('Failed to update session status to completed');
                 }
 
-                // Create transaction record
-                $user_id = $_SESSION['user_id'] ?? 1;
-                $stmt = $this->db->prepare("
-                INSERT INTO transactions 
-                (session_id, console_id, customer_name, customer_number, player_count, rate_type, 
-                 start_time, end_time, duration, total_duration_minutes, gaming_amount, fandd_amount, 
-                 subtotal, tax_amount, total_amount, payment_method, payment_details, coupon_code, 
-                 discount_amount, final_amount, created_by) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ");
+                // DO NOT CREATE TRANSACTION RECORD HERE
+                // DO NOT UPDATE CONSOLE STATUS HERE
 
-                $duration_minutes = round($actual_play_time / 60);
-                $payment_method = $session['payment_method'] ?? 'pending';
-                $payment_details = $session['payment_details'] ?? null;
-                $coupon_code = $session['coupon_code'] ?? null;
-                $discount_amount = $session['discount_amount'] ?? 0;
-                $final_amount = $session['final_amount'] ?? $total_amount;
+                // Get F&D items for the session to return
+                $fandd_items = $this->getSessionFandDItems($session['id']);
 
-                $stmt->bind_param(
-                    "iississsiidddddsssddi",
-                    $session['id'],
-                    $console_id,
-                    $session['customer_name'],
-                    $session['customer_number'],
-                    $session['player_count'],
-                    $session['rate_type'],
-                    $session['start_time'],
-                    $end_time,
-                    $duration_minutes,
-                    $duration_minutes,
-                    $gaming_amount,
-                    $fandd_total,
-                    $subtotal,
-                    $tax_amount,
-                    $total_amount,
-                    $payment_method,
-                    $payment_details,
-                    $coupon_code,
-                    $discount_amount,
-                    $final_amount,
-                    $user_id
-                );
-
-                if (!$stmt->execute()) {
-                    throw new Exception('Failed to create transaction record');
-                }
-
-                // Update console status
-                $stmt = $this->db->prepare("UPDATE consoles SET status = 'Available' WHERE id = ?");
-                $stmt->bind_param("i", $console_id);
-                if (!$stmt->execute()) {
-                    throw new Exception('Failed to update console status');
-                }
-
-                // Get F&D items for the session
-                $stmt = $this->db->prepare("
-                SELECT item_name as name, quantity, unit_price, total_price 
-                FROM session_items 
-                WHERE session_id = ?
-            ");
-                $stmt->bind_param("i", $session['id']);
-                $stmt->execute();
-                $fandd_items = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-
-                // Commit transaction
+                // Commit the session status update
                 $this->db->commit();
 
-                $this->logActivity("Ended gaming session on console {$console_id}. Total: ₹" . number_format($total_amount, 2), $console_id);
+                $this->logActivity("Session {$session['id']} ended and billing details generated for console {$console_id}.", $console_id);
 
                 return [
                     'success' => true,
-                    'message' => 'Session ended successfully',
+                    'message' => 'Session ended and billing details generated',
                     'data' => [
                         'session_id' => $session['id'],
+                        'console_id' => $console_id,
                         'customer_name' => $session['customer_name'],
                         'customer_number' => $session['customer_number'],
                         'player_count' => $session['player_count'],
@@ -413,7 +362,7 @@ class SessionManager
                         'gaming_amount' => $gaming_amount,
                         'fandd_amount' => $fandd_total,
                         'tax_amount' => $tax_amount,
-                        'duration_minutes' => $duration_minutes,
+                        'duration_minutes' => round($actual_play_time / 60),
                         'billing_details' => $billing_data,
                         'fandd_items' => $fandd_items
                     ]
@@ -759,15 +708,77 @@ class SessionManager
         return ['success' => true, 'data' => $sessions];
     }
 
+    private function getBillingDetails()
+    {
+        $session_id = $_GET['session_id'] ?? null;
+
+        if (!$session_id) {
+            return ['success' => false, 'message' => 'Session ID is required'];
+        }
+
+        // Get session details
+        $stmt = $this->db->prepare("
+            SELECT gs.*, c.name as console_name, c.type as console_type, c.location
+            FROM gaming_sessions gs
+            JOIN consoles c ON gs.console_id = c.id
+            WHERE gs.id = ?
+        ");
+        $stmt->bind_param("i", $session_id);
+        $stmt->execute();
+        $session = $stmt->get_result()->fetch_assoc();
+
+        if (!$session) {
+            return ['success' => false, 'message' => 'Session not found'];
+        }
+
+        // Calculate final amounts (without ending the session)
+        $end_time = date('Y-m-d H:i:s');
+        $start_time = new DateTime($session['start_time']);
+        $end_datetime = new DateTime($end_time);
+        $total_seconds = $end_datetime->getTimestamp() - $start_time->getTimestamp();
+        $pause_duration = $session['total_pause_duration'] ?? 0;
+        $actual_play_time = $total_seconds - $pause_duration;
+
+        $billing_data = $this->calculateSessionBilling($actual_play_time, $session['player_count'], $session['rate_type']);
+        $fandd_total = $this->getSessionFandDTotal($session['id']);
+
+        $gaming_amount = $billing_data['total_amount'];
+        $subtotal = $gaming_amount + $fandd_total;
+        $tax_rate = $this->getTaxRate();
+        $tax_amount = $subtotal * $tax_rate;
+        $total_amount = $subtotal + $tax_amount;
+
+        return [
+            'success' => true,
+            'data' => [
+                'session_id' => $session['id'],
+                'customer_name' => $session['customer_name'],
+                'customer_number' => $session['customer_number'],
+                'player_count' => $session['player_count'],
+                'rate_type' => $session['rate_type'],
+                'total_amount' => $total_amount,
+                'gaming_amount' => $gaming_amount,
+                'fandd_amount' => $fandd_total,
+                'tax_amount' => $tax_amount,
+                'duration_minutes' => round($actual_play_time / 60),
+                'billing_details' => $billing_data,
+                'fandd_items' => $this->getSessionFandDItems($session['id'])
+            ]
+        ];
+    }
+
     private function processPayment()
     {
         $input = json_decode(file_get_contents('php://input'), true);
         $session_id = $input['session_id'] ?? null;
         $payment_method = $input['payment_method'] ?? '';
         $coupon_code = $input['coupon_code'] ?? null;
-        // Ignore client-sent discount/final amounts; compute server-side to ensure coupon applies only to gaming
-        $discount_amount = 0;
-        $final_amount = 0;
+        $discount_amount = $input['discount_amount'] ?? 0; // Now received from frontend
+        $final_amount = $input['final_amount'] ?? 0; // Now received from frontend
+        $gaming_amount = $input['gaming_amount'] ?? 0;
+        $fandd_amount = $input['fandd_amount'] ?? 0;
+        $tax_amount = $input['tax_amount'] ?? 0;
+
         $payment_details = $input['payment_details'] ?? null;
 
         if (!$session_id || !$payment_method) {
@@ -778,98 +789,102 @@ class SessionManager
         $this->db->begin_transaction();
 
         try {
-            // Read authoritative amounts from the transaction created at session end
-            $txStmt = $this->db->prepare("SELECT gaming_amount, fandd_amount, tax_amount FROM transactions WHERE session_id = ? LIMIT 1");
-            $txStmt->bind_param("i", $session_id);
-            $txStmt->execute();
-            $tx = $txStmt->get_result()->fetch_assoc();
+            // Get session details to retrieve console_id and other info needed for transaction record
+            $stmt = $this->db->prepare("SELECT * FROM gaming_sessions WHERE id = ?");
+            $stmt->bind_param("i", $session_id);
+            $stmt->execute();
+            $session = $stmt->get_result()->fetch_assoc();
 
-            if (!$tx) {
-                throw new Exception('Transaction not found for session');
+            if (!$session) {
+                throw new Exception('Session not found for payment processing');
             }
 
-            $gaming_amount = floatval($tx['gaming_amount'] ?? 0);
-            $fandd_amount = floatval($tx['fandd_amount'] ?? 0);
-            $tax_amount = floatval($tx['tax_amount'] ?? 0);
+            $console_id = $session['console_id'];
+            $customer_name = $session['customer_name'];
+            $customer_number = $session['customer_number'];
+            $player_count = $session['player_count'];
+            $rate_type = $session['rate_type'];
+            $start_time = $session['start_time'];
+            $end_time = $session['end_time'];
+            $duration_minutes = round(($session['total_duration_seconds'] ?? 0) / 60);
+            $subtotal = $gaming_amount + $fandd_amount;
+            $total_amount_with_tax = $subtotal + $tax_amount;
 
-            // Compute discount only on gaming amount
-            $computed_discount = 0.0;
-            if ($coupon_code) {
-                $couponStmt = $this->db->prepare("SELECT * FROM coupons WHERE code = ? AND status = 'Active' LIMIT 1");
-                $couponStmt->bind_param("s", $coupon_code);
-                $couponStmt->execute();
-                $coupon = $couponStmt->get_result()->fetch_assoc();
 
-                if ($coupon) {
-                    $today = date('Y-m-d');
-                    if (($coupon['valid_from'] && $coupon['valid_from'] > $today) || ($coupon['valid_to'] && $coupon['valid_to'] < $today)) {
-                        throw new Exception('Coupon is not valid today');
-                    }
-                    if ($coupon['usage_limit'] > 0 && $coupon['times_used'] >= $coupon['usage_limit']) {
-                        throw new Exception('Coupon usage limit reached');
-                    }
-                    if ($gaming_amount < floatval($coupon['min_order_amount'])) {
-                        throw new Exception('Minimum gaming amount not met for coupon');
-                    }
-
-                    if ($coupon['discount_type'] === 'percentage') {
-                        $computed_discount = ($gaming_amount * floatval($coupon['discount_value'])) / 100.0;
-                    } elseif ($coupon['discount_type'] === 'flat') {
-                        $computed_discount = min(floatval($coupon['discount_value']), $gaming_amount);
-                    } elseif ($coupon['discount_type'] === 'time_bonus') {
-                        $computed_discount = 0.0; // time bonus handled as extra minutes, not monetary here
-                    }
-                }
-            }
-
-            $discount_amount = round($computed_discount, 2);
-            $final_amount = round(($gaming_amount - $discount_amount) + $fandd_amount + $tax_amount, 2);
-
-            // Update session with payment details (authoritative server-side amounts)
+            // Create transaction record
+            $user_id = $_SESSION['user_id'] ?? 1;
             $stmt = $this->db->prepare("
-				UPDATE gaming_sessions 
-				SET payment_method = ?, 
-					coupon_code = ?, 
-					discount_amount = ?, 
-					final_amount = ?,
-					payment_status = 'completed',
-					payment_date = NOW()
-				WHERE id = ?
-			");
+                INSERT INTO transactions 
+                (session_id, console_id, customer_name, customer_number, player_count, rate_type, 
+                 start_time, end_time, duration, total_duration_minutes, gaming_amount, fandd_amount, 
+                 subtotal, tax_amount, total_amount, payment_method, payment_details, coupon_code, 
+                 discount_amount, final_amount, payment_status, created_by, payment_date) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, NOW())
+            ");
+
+            $payment_details_json = $payment_details ? json_encode($payment_details) : null;
+
+            $stmt->bind_param(
+                "iississsiiddddsssddii",
+                $session_id,
+                $console_id,
+                $customer_name,
+                $customer_number,
+                $player_count,
+                $rate_type,
+                $start_time,
+                $end_time,
+                $duration_minutes,
+                $duration_minutes,
+                $gaming_amount,
+                $fandd_amount,
+                $subtotal,
+                $tax_amount,
+                $total_amount_with_tax, // Use the total_amount calculated here with tax
+                $payment_method,
+                $payment_details_json,
+                $coupon_code,
+                $discount_amount,
+                $final_amount,
+                $user_id
+            );
+
+            if (!$stmt->execute()) {
+                throw new Exception('Failed to create transaction record');
+            }
+
+            // Update console status to Available
+            $stmt = $this->db->prepare("UPDATE consoles SET status = 'Available' WHERE id = ?");
+            $stmt->bind_param("i", $console_id);
+            if (!$stmt->execute()) {
+                throw new Exception('Failed to update console status');
+            }
+
+            // Update gaming_sessions with final payment status
+            $stmt = $this->db->prepare("
+                UPDATE gaming_sessions 
+                SET payment_method = ?, 
+                    coupon_code = ?, 
+                    discount_amount = ?, 
+                    final_amount = ?,
+                    payment_status = 'completed',
+                    payment_date = NOW()
+                WHERE id = ?
+            ");
             $stmt->bind_param("ssddi", $payment_method, $coupon_code, $discount_amount, $final_amount, $session_id);
 
             if (!$stmt->execute()) {
                 throw new Exception('Failed to update session payment details');
             }
 
-            // Update transaction record with payment details
-            $payment_details_json = $payment_details ? json_encode($payment_details) : null;
-            $stmt = $this->db->prepare("
-				UPDATE transactions 
-				SET payment_method = ?, 
-					coupon_code = ?, 
-					discount_amount = ?, 
-					final_amount = ?,
-					total_amount = ?,
-					payment_details = ?,
-					payment_status = 'completed',
-					payment_date = NOW()
-				WHERE session_id = ?
-			");
-            $stmt->bind_param("ssddssi", $payment_method, $coupon_code, $discount_amount, $final_amount, $final_amount, $payment_details_json, $session_id);
-
-            if (!$stmt->execute()) {
-                throw new Exception('Failed to update transaction payment details');
-            }
-
             // If coupon was used, mark it as used
             if ($coupon_code && $discount_amount > 0) {
                 $stmt = $this->db->prepare("
-					UPDATE coupons 
-					SET usage_count = usage_count + 1,
-						last_used_at = NOW()
-					WHERE code = ? AND status = 'active'
-				");
+                    UPDATE coupons 
+                    SET usage_count = usage_count + 1,
+                        last_used_at = NOW()
+                    WHERE code = ? AND status = 'active'
+                ");
                 $stmt->bind_param("s", $coupon_code);
                 $stmt->execute();
             }
@@ -877,7 +892,7 @@ class SessionManager
             // Commit transaction
             $this->db->commit();
 
-            $this->logActivity("Payment processed for session {$session_id}. Method: {$payment_method}, Amount: ₹" . number_format($final_amount, 2), null);
+            $this->logActivity("Payment processed and session finalized for session {$session_id}. Method: {$payment_method}, Amount: ₹" . number_format($final_amount, 2), $console_id);
 
             return [
                 'success' => true,
@@ -895,6 +910,73 @@ class SessionManager
         }
     }
 
+    private function getPreBillingDetails()
+    {
+        $session_id = $_GET['session_id'] ?? null;
+
+        if (!$session_id) {
+            return ['success' => false, 'message' => 'Session ID is required'];
+        }
+
+        // Get session details
+        $stmt = $this->db->prepare("
+            SELECT gs.*, c.name as console_name, c.type as console_type, c.location
+            FROM gaming_sessions gs
+            JOIN consoles c ON gs.console_id = c.id
+            WHERE gs.id = ? AND gs.status IN ('active', 'paused')
+        ");
+        $stmt->bind_param("i", $session_id);
+        $stmt->execute();
+        $session = $stmt->get_result()->fetch_assoc();
+
+        if (!$session) {
+            return ['success' => false, 'message' => 'No active or paused session found for this ID.'];
+        }
+
+        // Calculate final amounts without modifying the session status or creating a transaction
+        $end_time = date('Y-m-d H:i:s');
+        $start_time = new DateTime($session['start_time']);
+        $end_datetime = new DateTime($end_time);
+        $total_seconds = $end_datetime->getTimestamp() - $start_time->getTimestamp();
+        $pause_duration = $session['total_pause_duration'] ?? 0;
+        $actual_play_time = $total_seconds - $pause_duration;
+
+        // Calculate billing using pricing table
+        $billing_data = $this->calculateSessionBilling($actual_play_time, $session['player_count'], $session['rate_type']);
+
+        // Get F&D total
+        $fandd_total = $this->getSessionFandDTotal($session['id']);
+
+        // Calculate totals
+        $gaming_amount = $billing_data['total_amount'];
+        $subtotal = $gaming_amount + $fandd_total;
+        $tax_rate = $this->getTaxRate();
+        $tax_amount = $subtotal * $tax_rate;
+        $total_amount = $subtotal + $tax_amount;
+
+        // Get F&D items for the session to return
+        $fandd_items = $this->getSessionFandDItems($session['id']);
+
+        return [
+            'success' => true,
+            'message' => 'Pre-billing details generated',
+            'data' => [
+                'session_id' => $session['id'],
+                'console_id' => $session['console_id'],
+                'customer_name' => $session['customer_name'],
+                'customer_number' => $session['customer_number'],
+                'player_count' => $session['player_count'],
+                'rate_type' => $session['rate_type'],
+                'total_amount' => $total_amount,
+                'gaming_amount' => $gaming_amount,
+                'fandd_amount' => $fandd_total,
+                'tax_amount' => $tax_amount,
+                'duration_minutes' => round($actual_play_time / 60),
+                'billing_details' => $billing_data,
+                'fandd_items' => $fandd_items
+            ]
+        ];
+    }
 
     private function calculateSessionBilling($seconds, $player_count, $rate_type)
     {
@@ -965,6 +1047,18 @@ class SessionManager
         $result = $stmt->get_result()->fetch_assoc();
 
         return $result['total'] ?? 0;
+    }
+
+    private function getSessionFandDItems($session_id)
+    {
+        $stmt = $this->db->prepare("
+            SELECT item_name as name, quantity, unit_price, total_price 
+            FROM session_items 
+            WHERE session_id = ?
+        ");
+        $stmt->bind_param("i", $session_id);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     }
 
     private function getTaxRate()

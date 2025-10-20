@@ -4,12 +4,11 @@ $currentPage = 'console-mapping';
 require_once __DIR__ . '/../includes/header.php';
 ?>
 <style>
-button:disabled {
-  color: grey !important;
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
+    button:disabled {
+        color: grey !important;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
 </style>
 <section id="console-mapping" class="content-section active">
     <div class="section-header">
@@ -172,7 +171,7 @@ button:disabled {
 
         <div class="fandd-modal-actions">
             <div class="fandd-selected-summary">
-                 No items selected
+                No items selected
             </div>
             <div class="fandd-action-buttons">
                 <button type="button" class="btn btn--secondary" id="cancel-add-fandd">Cancel</button>
@@ -307,6 +306,8 @@ button:disabled {
                         return;
                     }
 
+                    consolesData = result.data; // Store fetched data globally
+
                     result.data.forEach(console => {
                         const card = document.createElement('div');
                         // Determine card class based on maintenance status and current session
@@ -315,6 +316,7 @@ button:disabled {
                         // Check if console has an active session (occupied)
                         if (console.current_session) {
                             cardClass = 'occupied';
+                            card.setAttribute('data-session-id', console.current_session.id);
                         }
 
                         // Override with maintenance if under maintenance
@@ -323,6 +325,7 @@ button:disabled {
                         }
 
                         card.className = `console-card ${cardClass}`;
+                        card.setAttribute('data-console-id', console.id);
                         card.setAttribute('data-type', console.type.toLowerCase());
 
                         let sessionContent = '';
@@ -444,11 +447,20 @@ button:disabled {
                         // Get status display info
                         const getStatusInfo = () => {
                             if (console.under_maintenance == 1 || console.under_maintenance === true) {
-                                return { text: 'MAINTENANCE', icon: '🔧' };
+                                return {
+                                    text: 'MAINTENANCE',
+                                    icon: '🔧'
+                                };
                             } else if (console.current_session) {
-                                return { text: 'OCCUPIED', icon: '🔴' };
+                                return {
+                                    text: 'OCCUPIED',
+                                    icon: '🔴'
+                                };
                             } else {
-                                return { text: 'AVAILABLE', icon: '🟢' };
+                                return {
+                                    text: 'AVAILABLE',
+                                    icon: '🟢'
+                                };
                             }
                         };
 
@@ -616,6 +628,7 @@ button:disabled {
     // Session Management
     let activeSessions = {};
     let sessionTimers = {};
+    let consolesData = []; // Global variable to store console data
 
     // Start Gaming Session Modal
     function showStartSessionModal(consoleId) {
@@ -746,31 +759,44 @@ button:disabled {
     // End Session
     function endSession(consoleId) {
         if (confirm('Are you sure you want to end this session?')) {
-            fetch(`${SITE_URL}/api/sessions.php?action=end`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        console_id: consoleId
-                    })
-                })
+            const consoleCard = document.querySelector(`.console-card[data-console-id="${consoleId}"]`);
+            if (!consoleCard) {
+                alert('Console card not found.');
+                return;
+            }
+            const sessionId = consoleCard.dataset.sessionId; // Get the session ID from the card
+
+            if (!sessionId) {
+                alert('No active session ID found for this console.');
+                return;
+            }
+
+            // Call the new API to get pre-billing details without ending the session
+            fetch(`${SITE_URL}/api/sessions.php?action=get_pre_billing_details&session_id=${sessionId}`)
                 .then(res => res.json())
                 .then(result => {
                     if (result.success) {
-                        // Show billing modal
+                        // Populate currentBillingData with actual data from backend
+                        currentBillingData = result.data;
                         showBillingModal(result.data);
-
-                        if (sessionTimers[consoleId]) {
-                            clearInterval(sessionTimers[consoleId]);
-                            delete sessionTimers[consoleId];
-                        }
-                        loadConsoles();
                     } else {
-                        alert('Error: ' + result.message);
+                        alert('Error fetching billing details: ' + result.message);
                     }
+                })
+                .catch(error => {
+                    console.error('Error fetching pre-billing details:', error);
+                    alert('Error fetching pre-billing details. Please try again.');
                 });
         }
+    }
+
+    // Helper to get active session ID (no longer used, but kept for reference if needed elsewhere)
+    function getActiveSessionId(consoleId) {
+        const consoleCard = document.querySelector(`.console-card.occupied[data-console-id="${consoleId}"]`);
+        if (consoleCard && consoleCard.dataset.sessionId) {
+            return consoleCard.dataset.sessionId;
+        }
+        return null; // Return null if not found
     }
 
     // Transfer Session
@@ -904,7 +930,7 @@ button:disabled {
                             itemCard.className = 'fandd-item-card';
                             itemCard.setAttribute('data-category', item.category.toLowerCase());
                             itemCard.style.animationDelay = `${index * 0.1}s`;
-                            
+
                             itemCard.innerHTML = `
                                 <div class="fandd-item-header">
                                     <div class="fandd-item-name">${item.name}</div>
@@ -921,7 +947,7 @@ button:disabled {
                                 </div>
                                 <input type="hidden" class="fandd-item-data" data-id="${item.id}" data-name="${item.name}" data-price="${item.price}">
                             `;
-                            
+
                             // Add click handler for card selection
                             itemCard.addEventListener('click', (e) => {
                                 if (!e.target.matches('.fandd-qty-btn, .fandd-qty-input')) {
@@ -932,7 +958,7 @@ button:disabled {
                                     }
                                 }
                             });
-                            
+
                             grid.appendChild(itemCard);
                         }
                     });
@@ -955,7 +981,7 @@ button:disabled {
         const card = input.closest('.fandd-item-card');
         const minusBtn = card.querySelector('.fandd-qty-minus');
         const plusBtn = card.querySelector('.fandd-qty-plus');
-        
+
         let currentValue = parseInt(input.value) || 0;
         let newValue = currentValue + change;
 
@@ -1321,36 +1347,73 @@ button:disabled {
             session_id: currentBillingData.session_id,
             payment_method: paymentMethod,
             coupon_code: appliedCoupon ? appliedCoupon.code : null,
+            // Send the calculated amounts from the frontend to the backend
             discount_amount: parseFloat(document.getElementById('discount-amount').textContent),
             final_amount: parseFloat(document.getElementById('grand-total-amount').textContent),
             gaming_amount: parseFloat(document.getElementById('gaming-total-amount').textContent),
             fandd_amount: parseFloat(document.getElementById('food-drinks-total-amount').textContent),
+            tax_amount: (parseFloat(document.getElementById('grand-total-amount').textContent) -
+                parseFloat(document.getElementById('gaming-total-amount').textContent) -
+                parseFloat(document.getElementById('food-drinks-total-amount').textContent) +
+                parseFloat(document.getElementById('discount-amount').textContent)).toFixed(2),
             payment_details: paymentDetails
         };
 
         console.log('Payment Data:', paymentData);
 
-        // Save payment to database
-        fetch(`${SITE_URL}/api/sessions.php?action=process_payment`, {
+        // First, call the 'end' action to finalize the session and get server-side calculated billing
+        fetch(`${SITE_URL}/api/sessions.php?action=end`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(paymentData)
+                body: JSON.stringify({
+                    console_id: currentBillingData.console_id
+                }) // Only console_id is needed for 'end'
             })
             .then(res => res.json())
-            .then(result => {
-                if (result.success) {
-                    alert('Payment processed successfully!');
-                    printReceipt();
-                    closeBillingModal();
+            .then(endSessionResult => {
+                if (endSessionResult.success) {
+                    // Now that the session is officially 'ended' on backend, process payment
+                    // Use the billing data returned from the 'end' action if needed for precise amounts,
+                    // but for now, we'll continue using client-calculated amounts for consistency with paymentData structure.
+                    // If backend calculation is preferred, replace paymentData amounts with endSessionResult.data amounts.
+
+                    // Proceed with processing payment
+                    fetch(`${SITE_URL}/api/sessions.php?action=process_payment`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(paymentData)
+                        })
+                        .then(res => res.json())
+                        .then(paymentResult => {
+                            if (paymentResult.success) {
+                                alert('Payment processed successfully!');
+                                printReceipt();
+                                closeBillingModal();
+                                if (sessionTimers[currentBillingData.console_id]) {
+                                    clearInterval(sessionTimers[currentBillingData.console_id]);
+                                    delete sessionTimers[currentBillingData.console_id];
+                                }
+                                loadConsoles();
+                            } else {
+                                alert('Error processing payment: ' + paymentResult.message);
+                                // Potentially revert session end if payment fails? (Complex, might be handled by manual admin intervention)
+                            }
+                        })
+                        .catch(paymentError => {
+                            console.error('Error processing payment:', paymentError);
+                            alert('Error processing payment. Please try again.');
+                        });
                 } else {
-                    alert('Error processing payment: ' + result.message);
+                    alert('Error finalizing session: ' + endSessionResult.message);
                 }
             })
-            .catch(error => {
-                console.error('Error processing payment:', error);
-                alert('Error processing payment');
+            .catch(endSessionError => {
+                console.error('Error finalizing session:', endSessionError);
+                alert('Error finalizing session. Please try again.');
             });
     }
 
@@ -1866,7 +1929,7 @@ button:disabled {
         padding: 0 16px 16px 16px;
         display: flex;
         flex-direction: column;
-        padding-bottom:0;
+        padding-bottom: 0;
     }
 
     /* Occupied Session */
@@ -1885,7 +1948,7 @@ button:disabled {
         text-align: center;
         margin-bottom: 12px;
         font-family: 'Courier New', monospace;
-        background:var(--color-success);
+        background: var(--color-success);
         padding: 8px;
         border-radius: 6px;
     }
@@ -1898,8 +1961,8 @@ button:disabled {
         /* margin: 0 0 6px 0; */
         font-size: 13px;
         color: black !important;
-        height:20px;
-        font-weight:normal;
+        height: 20px;
+        font-weight: normal;
     }
 
     /* Session Items */
@@ -2006,7 +2069,7 @@ button:disabled {
         border-radius: 8px;
         border: 1px solid var(--color-border);
         margin: 6px 6px;
-        width:100%;
+        width: 100%;
     }
 
     .top-buttons {
@@ -2037,10 +2100,25 @@ button:disabled {
         transform: translateY(-1px);
     }
 
-    .top-buttons .btn:nth-child(1)::before { content: '🍕'; font-size: 12px; }
-    .top-buttons .btn:nth-child(2)::before { content: '🔄'; font-size: 12px; }
-    .top-buttons .btn:nth-child(3)::before { content: '👥'; font-size: 12px; }
-    .top-buttons .btn:nth-child(4)::before { content: '⏸️'; font-size: 12px; }
+    .top-buttons .btn:nth-child(1)::before {
+        content: '🍕';
+        font-size: 12px;
+    }
+
+    .top-buttons .btn:nth-child(2)::before {
+        content: '🔄';
+        font-size: 12px;
+    }
+
+    .top-buttons .btn:nth-child(3)::before {
+        content: '👥';
+        font-size: 12px;
+    }
+
+    .top-buttons .btn:nth-child(4)::before {
+        content: '⏸️';
+        font-size: 12px;
+    }
 
     .bottom-buttons {
         display: flex;
@@ -2422,12 +2500,19 @@ button:disabled {
 
     /* F&D Modal Animations */
     @keyframes bounce {
-        0%, 20%, 50%, 80%, 100% {
+
+        0%,
+        20%,
+        50%,
+        80%,
+        100% {
             transform: translateY(0);
         }
+
         40% {
             transform: translateY(-10px);
         }
+
         60% {
             transform: translateY(-5px);
         }
@@ -2438,6 +2523,7 @@ button:disabled {
             opacity: 0;
             transform: translateY(30px) scale(0.95);
         }
+
         to {
             opacity: 1;
             transform: translateY(0) scale(1);
@@ -2449,6 +2535,7 @@ button:disabled {
             opacity: 0;
             transform: scale(0.9);
         }
+
         to {
             opacity: 1;
             transform: scale(1);
@@ -2523,6 +2610,7 @@ button:disabled {
         0% {
             background-position: -200px 0;
         }
+
         100% {
             background-position: calc(200px + 100%) 0;
         }
@@ -2772,11 +2860,12 @@ button:disabled {
     }
 </style>
 
-<?php require_once __DIR__ . '/../includes/footer.php'; ?>  
+<?php require_once __DIR__ . '/../includes/footer.php'; ?>
 <style>
-/* Lo
+    /* Lo
 ading and Error States */
-    .loading-message, .error-message {
+    .loading-message,
+    .error-message {
         text-align: center;
         padding: 40px 20px;
         font-size: 16px;
@@ -2828,9 +2917,12 @@ ading and Error States */
     }
 
     @keyframes selectedPulse {
-        0%, 100% {
+
+        0%,
+        100% {
             box-shadow: var(--shadow-md), 0 0 20px rgba(var(--color-success-rgb), 0.2);
         }
+
         50% {
             box-shadow: var(--shadow-lg), 0 0 30px rgba(var(--color-success-rgb), 0.4);
         }
@@ -2869,37 +2961,71 @@ ading and Error States */
 
     /* Success feedback animation */
     @keyframes successFeedback {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.1); }
-        100% { transform: scale(1); }
+        0% {
+            transform: scale(1);
+        }
+
+        50% {
+            transform: scale(1.1);
+        }
+
+        100% {
+            transform: scale(1);
+        }
     }
 
     .fandd-item-card.success-feedback {
         animation: successFeedback 0.3s ease;
     }
-  /* Enhanced Console Card Animations */
+
+    /* Enhanced Console Card Animations */
     @keyframes pulse-occupied {
-        0%, 100% { 
+
+        0%,
+        100% {
             box-shadow: var(--shadow-sm), 0 0 0 0 rgba(var(--color-warning-rgb), 0.4);
         }
-        50% { 
+
+        50% {
             box-shadow: var(--shadow-md), 0 0 0 12px rgba(var(--color-warning-rgb), 0);
         }
     }
 
     @keyframes gradient-shift {
-        0%, 100% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
+
+        0%,
+        100% {
+            background-position: 0% 50%;
+        }
+
+        50% {
+            background-position: 100% 50%;
+        }
     }
 
     @keyframes pulse-icon {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.2); }
+
+        0%,
+        100% {
+            transform: scale(1);
+        }
+
+        50% {
+            transform: scale(1.2);
+        }
     }
 
     @keyframes blink {
-        0%, 50% { opacity: 1; }
-        51%, 100% { opacity: 0.4; }
+
+        0%,
+        50% {
+            opacity: 1;
+        }
+
+        51%,
+        100% {
+            opacity: 0.4;
+        }
     }
 
     /* Card loading animation */
@@ -2908,6 +3034,7 @@ ading and Error States */
             opacity: 0;
             transform: translateX(-30px) scale(0.95);
         }
+
         to {
             opacity: 1;
             transform: translateX(0) scale(1);
@@ -3042,4 +3169,4 @@ ading and Error States */
             order: 2;
         }
     }
-        </style>  
+</style>
