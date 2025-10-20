@@ -114,7 +114,7 @@ try {
                     SET name = ?, price = ?, stock = ?, category = ?, description = ?, is_available = ? 
                     WHERE id = ?
                 ");
-                $stmt->bind_param("sdisii", $name, $price, $stock, $category, $description, $is_available, $id);
+    $stmt->bind_param("sdissii", $name, $price, $stock, $category, $description, $is_available, $id);
 
                 if ($stmt->execute()) {
                     echo json_encode(['success' => true, 'message' => 'Item updated successfully']);
