@@ -56,6 +56,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <th>Duration</th>
                         <th>Gaming Amount</th>
                         <th>Food Amount</th>
+                        <th>Discount</th>
                         <th>Total Amount</th>
                         <th>Payment</th>
                         <th>Date</th>
@@ -71,6 +72,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <td colspan="4"><strong>TOTAL:</strong></td>
                         <td id="gaming-total">₹0.00</td>
                         <td id="food-total">₹0.00</td>
+                        <td id="discount-total">₹0.00</td>
                         <td id="grand-total">₹0.00</td>
                         <td colspan="4"></td>
                     </tr>
@@ -832,13 +834,15 @@ require_once __DIR__ . '/../includes/header.php';
         let grandTotal = 0;
 
         if (filteredTransactions.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="11" style="text-align: center; padding: 20px; color: #999;">No transactions found</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="12" style="text-align: center; padding: 20px; color: #999;">No transactions found</td></tr>';
             const gamingTotalEl = document.getElementById('gaming-total');
             const foodTotalEl = document.getElementById('food-total');
+            const discountTotalEl = document.getElementById('discount-total');
             const grandTotalEl = document.getElementById('grand-total');
 
             if (gamingTotalEl) gamingTotalEl.textContent = '₹0.00';
             if (foodTotalEl) foodTotalEl.textContent = '₹0.00';
+            if (discountTotalEl) discountTotalEl.textContent = '₹0.00';
             if (grandTotalEl) grandTotalEl.textContent = '₹0.00';
 
             updatePaginationInfo(0, 0);
@@ -866,6 +870,7 @@ require_once __DIR__ . '/../includes/header.php';
             <td>${formatDuration(txn.total_duration_minutes || txn.duration || 0)}</td>
             <td>₹${parseFloat(txn.gaming_amount || 0).toFixed(2)}</td>
             <td>₹${parseFloat(txn.fandd_amount || txn.food_amount || 0).toFixed(2)}</td>
+            <td>₹${parseFloat(txn.discount_amount || 0).toFixed(2)}</td>
             <td>₹${parseFloat(txn.total_amount || 0).toFixed(2)}</td>
             <td>
                 ${txn.payment_method || txn.payment_status || 'pending'}
@@ -891,18 +896,22 @@ require_once __DIR__ . '/../includes/header.php';
         });
 
         // Calculate totals from displayed transactions only
+        let discountTotal = 0;
         transactionsToShow.forEach(txn => {
             gamingTotal += parseFloat(txn.gaming_amount || 0);
             foodTotal += parseFloat(txn.fandd_amount || txn.food_amount || 0);
+            discountTotal += parseFloat(txn.discount_amount || 0);
             grandTotal += parseFloat(txn.total_amount || 0);
         });
 
         const gamingTotalEl = document.getElementById('gaming-total');
         const foodTotalEl = document.getElementById('food-total');
+        const discountTotalEl = document.getElementById('discount-total');
         const grandTotalEl = document.getElementById('grand-total');
 
         if (gamingTotalEl) gamingTotalEl.textContent = '₹' + gamingTotal.toFixed(2);
         if (foodTotalEl) foodTotalEl.textContent = '₹' + foodTotal.toFixed(2);
+        if (discountTotalEl) discountTotalEl.textContent = '₹' + discountTotal.toFixed(2);
         if (grandTotalEl) grandTotalEl.textContent = '₹' + grandTotal.toFixed(2);
 
         // Update total count and pagination

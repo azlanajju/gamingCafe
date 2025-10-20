@@ -125,6 +125,11 @@ class SessionManager
                         return $this->getActiveSessions();
                     }
                     break;
+                case 'get_session_segments':
+                    if ($method === 'GET') {
+                        return $this->getSessionSegmentsApi();
+                    }
+                    break;
                 case 'process_payment':
                     if ($method === 'POST') {
                         return $this->processPayment();
@@ -176,6 +181,19 @@ class SessionManager
         if ($stmt->execute()) {
             $session_id = $this->db->insert_id;
 
+            // Create initial session segment
+            error_log("startSession: Attempting to create initial segment for session_id={$session_id}");
+            $segment_created = $this->createSessionSegment($session_id, $player_count, $start_time);
+            error_log("startSession: createSessionSegment returned: " . ($segment_created ? 'true' : 'false'));
+            if (!$segment_created) {
+                error_log("startSession: Failed to create initial segment for session_id={$session_id}");
+                // Optionally, roll back the gaming_sessions insert if segment creation fails
+                // $this->db->rollback();
+                // return ['success' => false, 'message' => 'Failed to start session: initial segment creation failed'];
+            } else {
+                error_log("startSession: Successfully created initial segment for session_id={$session_id}");
+            }
+
             // Update console status
             $stmt = $this->db->prepare("UPDATE consoles SET status = 'Occupied' WHERE id = ?");
             $stmt->bind_param("i", $console_id);
@@ -217,7 +235,7 @@ class SessionManager
         $pause_time = date('Y-m-d H:i:s');
         $stmt = $this->db->prepare("
             UPDATE gaming_sessions 
-            SET status = 'paused', pause_start_time = ?, total_pause_duration = COALESCE(total_pause_duration, 0) 
+            SET status = 'paused', pause_start_time = ?
             WHERE id = ?
         ");
         $stmt->bind_param("si", $pause_time, $session['id']);
@@ -315,6 +333,9 @@ class SessionManager
             $tax_rate = $this->getTaxRate();
             $tax_amount = $subtotal * $tax_rate;
             $total_amount = $subtotal + $tax_amount;
+
+            // End the current active segment
+            $this->endCurrentActiveSegment($session['id'], $end_time, $session['player_count'], $session['rate_type']);
 
             // Start transaction
             $this->db->begin_transaction();
@@ -456,20 +477,114 @@ class SessionManager
             return ['success' => false, 'message' => 'No active session found'];
         }
 
-        // Update player count
+        // Check if player count has actually changed
+        if ($session['player_count'] == $new_player_count) {
+            return ['success' => false, 'message' => 'Player count is already the same.'];
+        }
+
+        // End the current segment and start a new one
+        $result = $this->_endCurrentSegmentAndStartNew($session['id'], $new_player_count, $session['player_count'], $session['rate_type']);
+        if (!$result['success']) {
+            return $result;
+        }
+
+        // Update player count in the main session table
         $stmt = $this->db->prepare("UPDATE gaming_sessions SET player_count = ? WHERE id = ?");
         $stmt->bind_param("ii", $new_player_count, $session['id']);
 
         if ($stmt->execute()) {
-            $this->logActivity("Changed player count to {$new_player_count} on console {$console_id}", $console_id);
-            return ['success' => true, 'message' => 'Player count updated successfully'];
+            $this->logActivity("Changed player count from {$session['player_count']} to {$new_player_count} on console {$console_id}", $console_id);
+            return ['success' => true, 'message' => 'Player count updated and new segment started successfully'];
         } else {
             return ['success' => false, 'message' => 'Failed to update player count'];
         }
     }
 
+    private function createSessionSegment($session_id, $player_count, $start_time)
+    {
+        error_log("createSessionSegment: session_id={$session_id}, player_count={$player_count}, start_time={$start_time}");
+        $stmt = $this->db->prepare("INSERT INTO session_segments (session_id, player_count, start_time) VALUES (?, ?, ?)");
+        if (!$stmt) {
+            error_log("createSessionSegment: prepare failed - " . $this->db->error);
+            return false;
+        }
+        $stmt->bind_param("iis", $session_id, $player_count, $start_time);
+        $success = $stmt->execute();
+        if (!$success) {
+            error_log("createSessionSegment failed: " . $this->db->error);
+        } else {
+            error_log("createSessionSegment: Successfully created segment with ID " . $this->db->insert_id);
+        }
+        return $success;
+    }
+
+    private function endCurrentActiveSegment($session_id, $end_time, $player_count, $rate_type)
+    {
+        error_log("endCurrentActiveSegment: session_id={$session_id}, end_time={$end_time}, player_count={$player_count}, rate_type={$rate_type}");
+        $stmt = $this->db->prepare("
+            SELECT id, start_time FROM session_segments 
+            WHERE session_id = ? AND end_time IS NULL 
+            ORDER BY start_time DESC LIMIT 1
+        ");
+        $stmt->bind_param("i", $session_id);
+        $stmt->execute();
+        $active_segment = $stmt->get_result()->fetch_assoc();
+
+        if ($active_segment) {
+            error_log("endCurrentActiveSegment: Found active segment id={$active_segment['id']} starting at {$active_segment['start_time']}");
+            $start_datetime = new DateTime($active_segment['start_time']);
+            $end_datetime = new DateTime($end_time);
+            $interval = $end_datetime->diff($start_datetime);
+            $duration_minutes = $interval->days * 24 * 60 + $interval->h * 60 + $interval->i;
+            $actual_seconds = $end_datetime->getTimestamp() - $start_datetime->getTimestamp();
+
+            // Calculate amount for the segment using billing logic
+            $segment_billing = $this->calculateSessionBilling($actual_seconds, $player_count, $rate_type);
+            $segment_amount = $segment_billing['total_amount'];
+
+            error_log("endCurrentActiveSegment: Calculated duration_minutes={$duration_minutes}, actual_seconds={$actual_seconds}, segment_amount={$segment_amount}");
+
+            $stmt = $this->db->prepare("
+                UPDATE session_segments 
+                SET end_time = ?, duration = ?, amount = ? 
+                WHERE id = ?
+            ");
+            $stmt->bind_param("sddi", $end_time, $duration_minutes, $segment_amount, $active_segment['id']);
+            $success = $stmt->execute();
+            if (!$success) {
+                error_log("endCurrentActiveSegment UPDATE failed: " . $this->db->error);
+            }
+            return $success;
+        }
+        error_log("endCurrentActiveSegment: No active segment found for session_id={$session_id}");
+        return false;
+    }
+
+    private function _endCurrentSegmentAndStartNew($session_id, $new_player_count, $old_player_count, $rate_type)
+    {
+        error_log("_endCurrentSegmentAndStartNew: session_id={$session_id}, new_player_count={$new_player_count}, old_player_count={$old_player_count}, rate_type={$rate_type}");
+        $current_time = date('Y-m-d H:i:s');
+
+        // End the current active segment
+        $end_segment_success = $this->endCurrentActiveSegment($session_id, $current_time, $old_player_count, $rate_type);
+        if (!$end_segment_success) {
+            error_log("_endCurrentSegmentAndStartNew: endCurrentActiveSegment failed.");
+            return ['success' => false, 'message' => 'Failed to end current session segment.'];
+        }
+
+        // Start a new segment
+        $start_new_segment_success = $this->createSessionSegment($session_id, $new_player_count, $current_time);
+        if (!$start_new_segment_success) {
+            error_log("_endCurrentSegmentAndStartNew: createSessionSegment failed.");
+            return ['success' => false, 'message' => 'Failed to start new session segment.'];
+        }
+
+        return ['success' => true, 'message' => 'Segment updated successfully'];
+    }
+
     private function addFoodAndDrinks()
     {
+        error_log("Calling addFoodAndDrinks");
         $input = json_decode(file_get_contents('php://input'), true);
         $console_id = $input['console_id'] ?? null;
         $item_name = $input['item_name'] ?? '';
@@ -802,7 +917,7 @@ class SessionManager
             $console_id = $session['console_id'];
             $customer_name = $session['customer_name'];
             $customer_number = $session['customer_number'];
-            $player_count = $session['player_count'];
+            // $player_count = $session['player_count']; // Get this from segment data if needed for transaction
             $rate_type = $session['rate_type'];
             $start_time = $session['start_time'];
             $end_time = $session['end_time'];
@@ -810,6 +925,16 @@ class SessionManager
             $subtotal = $gaming_amount + $fandd_amount;
             $total_amount_with_tax = $subtotal + $tax_amount;
 
+            // Get player count from the last segment, or sum of segments if needed for transaction record
+            $stmt_segments = $this->db->prepare("SELECT SUM(amount) as total_gaming_from_segments FROM session_segments WHERE session_id = ?");
+            $stmt_segments->bind_param("i", $session_id);
+            $stmt_segments->execute();
+            $segments_result = $stmt_segments->get_result()->fetch_assoc();
+            $gaming_amount_from_segments = $segments_result['total_gaming_from_segments'] ?? 0;
+
+            // For transaction, use the gaming_amount passed from frontend (which came from getPreBillingDetails)
+            // Or, if more authoritative, use $gaming_amount_from_segments if preferred.
+            // For now, sticking with frontend passed $gaming_amount for consistency with coupon logic
 
             // Create transaction record
             $user_id = $_SESSION['user_id'] ?? 1;
@@ -830,13 +955,13 @@ class SessionManager
                 $console_id,
                 $customer_name,
                 $customer_number,
-                $player_count,
+                $session['player_count'], // Use the player_count from the main session record
                 $rate_type,
                 $start_time,
                 $end_time,
                 $duration_minutes,
                 $duration_minutes,
-                $gaming_amount,
+                $gaming_amount, // Use gaming_amount from frontend (which is from getPreBillingDetails)
                 $fandd_amount,
                 $subtotal,
                 $tax_amount,
@@ -937,25 +1062,45 @@ class SessionManager
         $end_time = date('Y-m-d H:i:s');
         $start_time = new DateTime($session['start_time']);
         $end_datetime = new DateTime($end_time);
-        $total_seconds = $end_datetime->getTimestamp() - $start_time->getTimestamp();
+        $total_seconds_since_start = $end_datetime->getTimestamp() - $start_time->getTimestamp();
         $pause_duration = $session['total_pause_duration'] ?? 0;
-        $actual_play_time = $total_seconds - $pause_duration;
 
-        // Calculate billing using pricing table
-        $billing_data = $this->calculateSessionBilling($actual_play_time, $session['player_count'], $session['rate_type']);
+        // Get all segments for the session
+        $segments = $this->getSessionSegments($session_id);
+        $total_gaming_amount = 0;
+        $total_actual_play_time_segments = 0; // In seconds
+
+        foreach ($segments as &$segment) {
+            $segment_start_time = new DateTime($segment['start_time']);
+            $segment_end_time = $segment['end_time'] ? new DateTime($segment['end_time']) : $end_datetime;
+            $segment_duration_seconds = $segment_end_time->getTimestamp() - $segment_start_time->getTimestamp();
+
+            // For the currently active segment (if end_time is null), consider current pause
+            if (!$segment['end_time'] && $session['status'] === 'paused' && $session['pause_start_time']) {
+                $current_pause_start = new DateTime($session['pause_start_time']);
+                // Only subtract pause time if the segment started before the pause and is still active during the pause
+                if ($segment_start_time < $current_pause_start) {
+                    $segment_duration_seconds -= (time() - $current_pause_start->getTimestamp());
+                }
+            }
+
+            $segment_actual_play_time = max(0, $segment_duration_seconds);
+            $segment_billing = $this->calculateSessionBilling($segment_actual_play_time, $segment['player_count'], $session['rate_type']);
+            $segment['calculated_amount'] = $segment_billing['total_amount'];
+            $segment['calculated_duration_minutes'] = round($segment_actual_play_time / 60);
+            $total_gaming_amount += $segment['calculated_amount'];
+            $total_actual_play_time_segments += $segment_actual_play_time;
+        }
+        unset($segment); // Break the reference with the last element
 
         // Get F&D total
         $fandd_total = $this->getSessionFandDTotal($session['id']);
 
-        // Calculate totals
-        $gaming_amount = $billing_data['total_amount'];
-        $subtotal = $gaming_amount + $fandd_total;
+        // Calculate totals based on summed gaming amount and fandd
+        $subtotal = $total_gaming_amount + $fandd_total;
         $tax_rate = $this->getTaxRate();
         $tax_amount = $subtotal * $tax_rate;
         $total_amount = $subtotal + $tax_amount;
-
-        // Get F&D items for the session to return
-        $fandd_items = $this->getSessionFandDItems($session['id']);
 
         return [
             'success' => true,
@@ -965,15 +1110,16 @@ class SessionManager
                 'console_id' => $session['console_id'],
                 'customer_name' => $session['customer_name'],
                 'customer_number' => $session['customer_number'],
-                'player_count' => $session['player_count'],
+                'player_count' => $session['player_count'], // Current player count of the session
                 'rate_type' => $session['rate_type'],
                 'total_amount' => $total_amount,
-                'gaming_amount' => $gaming_amount,
+                'gaming_amount' => $total_gaming_amount,
                 'fandd_amount' => $fandd_total,
                 'tax_amount' => $tax_amount,
-                'duration_minutes' => round($actual_play_time / 60),
-                'billing_details' => $billing_data,
-                'fandd_items' => $fandd_items
+                'duration_minutes' => round($total_actual_play_time_segments / 60),
+                'billing_details' => ['segments' => $segments], // Pass segments as part of billing details
+                'fandd_items' => $this->getSessionFandDItems($session['id']),
+                'segments' => $segments // Also pass segments directly for easier access on frontend
             ]
         ];
     }
@@ -1056,6 +1202,25 @@ class SessionManager
             FROM session_items 
             WHERE session_id = ?
         ");
+        $stmt->bind_param("i", $session_id);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
+    private function getSessionSegmentsApi()
+    {
+        $session_id = $_GET['session_id'] ?? null;
+
+        if (!$session_id) {
+            return ['success' => false, 'message' => 'Session ID is required'];
+        }
+
+        return ['success' => true, 'data' => $this->getSessionSegments($session_id)];
+    }
+
+    private function getSessionSegments($session_id)
+    {
+        $stmt = $this->db->prepare("SELECT * FROM session_segments WHERE session_id = ? ORDER BY start_time ASC");
         $stmt->bind_param("i", $session_id);
         $stmt->execute();
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);

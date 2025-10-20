@@ -491,10 +491,7 @@ require_once __DIR__ . '/../includes/header.php';
                                         <span class="spec-icon">⚙️</span>
                                         <span class="spec-text">${console.specifications || `${console.type}, ${console.purchase_year}`}</span>
                                     </div>
-                                    <div class="spec-item">
-                                        <span class="spec-icon">📍</span>
-                                        <span class="spec-text">${console.location}</span>
-                                    </div>
+  
                                     <div class="spec-item">
                                         <span class="spec-icon">👤</span>
                                         <span class="spec-text">${userRole}</span>
@@ -896,7 +893,7 @@ require_once __DIR__ . '/../includes/header.php';
             .then(res => res.json())
             .then(result => {
                 if (result.success) {
-                    alert('Player count updated successfully');
+                    alert('Player count updated successfully and new segment started');
                     document.getElementById('change-players-modal').classList.add('hidden');
                     loadConsoles();
                 } else {
@@ -1151,12 +1148,39 @@ require_once __DIR__ . '/../includes/header.php';
 
         // Populate gaming segments
         const gamingSegmentsList = document.getElementById('gaming-segments-list');
-        gamingSegmentsList.innerHTML = `
-            <div class="segment-item">
-                <span>Current: ${billingData.player_count || 1} players (${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')})</span>
-                <span>Base: ₹${parseFloat(billingData.gaming_amount || 0).toFixed(2)}, Final: ₹${parseFloat(billingData.gaming_amount || 0).toFixed(2)}</span>
-            </div>
-        `;
+        gamingSegmentsList.innerHTML = ''; // Clear existing content
+
+        if (billingData.segments && billingData.segments.length > 0) {
+            billingData.segments.forEach(segment => {
+                // Calculate segment duration for display
+                let segmentDurationMinutes = segment.duration; // Use already calculated duration if available
+                if (!segment.end_time) {
+                    // If it's the active segment, calculate duration from start_time to now
+                    const start = new Date(segment.start_time);
+                    const now = new Date();
+                    segmentDurationMinutes = Math.round((now.getTime() - start.getTime()) / (1000 * 60));
+                }
+
+                const segmentHours = Math.floor(segmentDurationMinutes / 60);
+                const segmentMinutes = segmentDurationMinutes % 60;
+                const segmentSeconds = 0; // Assuming duration is in minutes
+
+                const formattedSegmentDuration =
+                    `${segmentHours.toString().padStart(2, '0')}:${segmentMinutes.toString().padStart(2, '0')}:${segmentSeconds.toString().padStart(2, '0')}`;
+
+                gamingSegmentsList.innerHTML += `
+                    <div class="segment-item">
+                        <span>${segment.player_count} players (${formattedSegmentDuration})</span>
+                        <span>₹${parseFloat(segment.calculated_amount || 0).toFixed(2)}</span>
+                    </div>
+                `;
+            });
+        } else {
+            gamingSegmentsList.innerHTML = '<p>No gaming segments recorded</p>';
+        }
+
+        document.getElementById('pause-history').textContent = 'No pauses for this session.'; // Placeholder, update if pause history is available
+        document.getElementById('gaming-total-amount').textContent = parseFloat(billingData.gaming_amount || 0).toFixed(2);
 
         // Populate food & drinks
         const foodDrinksList = document.getElementById('food-drinks-list');

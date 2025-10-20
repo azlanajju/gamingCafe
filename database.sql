@@ -221,7 +221,8 @@ CREATE TABLE `session_segments` (
   `duration` int(11) DEFAULT 0 COMMENT 'in minutes',
   `amount` decimal(10,2) DEFAULT 0.00,
   PRIMARY KEY (`id`),
-  KEY `session_id` (`session_id`)
+  KEY `session_id` (`session_id`),
+  CONSTRAINT `fk_segment_session` FOREIGN KEY (`session_id`) REFERENCES `gaming_sessions` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -409,13 +410,13 @@ ALTER TABLE `session_items`
   ADD CONSTRAINT `fk_session_item_session` FOREIGN KEY (`session_id`) REFERENCES `gaming_sessions` (`id`) ON DELETE CASCADE;
 
 ALTER TABLE `session_segments`
-  ADD CONSTRAINT `fk_segment_session` FOREIGN KEY (`session_id`) REFERENCES `sessions` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `fk_segment_session` FOREIGN KEY (`session_id`) REFERENCES `gaming_sessions` (`id`) ON DELETE CASCADE;
 
 ALTER TABLE `session_pauses`
-  ADD CONSTRAINT `fk_pause_session` FOREIGN KEY (`session_id`) REFERENCES `sessions` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `fk_pause_session` FOREIGN KEY (`session_id`) REFERENCES `gaming_sessions` (`id`) ON DELETE CASCADE;
 
 ALTER TABLE `transactions`
-  ADD CONSTRAINT `fk_transaction_session` FOREIGN KEY (`session_id`) REFERENCES `sessions` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `fk_transaction_session` FOREIGN KEY (`session_id`) REFERENCES `gaming_sessions` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_transaction_console` FOREIGN KEY (`console_id`) REFERENCES `consoles` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `fk_transaction_user` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
@@ -426,4 +427,3 @@ ALTER TABLE `activity_logs`
   ADD CONSTRAINT `fk_log_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
 
 COMMIT;
-
