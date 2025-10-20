@@ -3,7 +3,14 @@ $pageTitle = 'Console Management';
 $currentPage = 'console-mapping';
 require_once __DIR__ . '/../includes/header.php';
 ?>
+<style>
+button:disabled {
+  color: grey !important;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
 
+</style>
 <section id="console-mapping" class="content-section active">
     <div class="section-header">
         <h2 class="section-title">Console Management</h2>
@@ -319,13 +326,13 @@ require_once __DIR__ . '/../includes/header.php';
                         // Console icons (edit and delete) - always shown
                         consoleIcons = `
                             <div class="console-icons">
-                                <button class="icon-btn edit-btn" onclick="editConsole(${console.id})" title="Edit Console">
+                                <button class="icon-btn edit-btn" onclick="editConsole(${console.id})" title="Edit Console"                ${cardClass === 'occupied' ? 'disabled' : ''}>
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                         <path d="m18.5 2.5 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                     </svg>
                                 </button>
-                                <button class="icon-btn delete-btn" onclick="deleteConsole(${console.id})" title="Delete Console">
+                                <button class="icon-btn delete-btn" onclick="deleteConsole(${console.id})" title="Delete Console"  ${cardClass === 'occupied' ? 'disabled' : ''}>
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                         <polyline points="3,6 5,6 21,6"></polyline>
                                         <path d="m19,6v14a2,2 0 0,1 -2,2H7a2,2 0 0,1 -2,-2V6m3,0V4a2,2 0 0,1 2,-2h4a2,2 0 0,1 2,2v2"></path>
