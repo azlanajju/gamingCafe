@@ -171,8 +171,13 @@ button:disabled {
         </div>
 
         <div class="fandd-modal-actions">
-            <button type="button" class="btn btn--secondary" id="cancel-add-fandd">Cancel</button>
-            <button type="button" class="btn btn--primary" id="confirm-add-fandd-btn">Select Items to Add</button>
+            <div class="fandd-selected-summary">
+                 No items selected
+            </div>
+            <div class="fandd-action-buttons">
+                <button type="button" class="btn btn--secondary" id="cancel-add-fandd">Cancel</button>
+                <button type="button" class="btn btn--primary" id="confirm-add-fandd-btn">Add Selected Items</button>
+            </div>
         </div>
     </div>
 </div>
@@ -318,6 +323,7 @@ button:disabled {
                         }
 
                         card.className = `console-card ${cardClass}`;
+                        card.setAttribute('data-type', console.type.toLowerCase());
 
                         let sessionContent = '';
                         let actionButtons = '';
@@ -422,15 +428,76 @@ button:disabled {
                         const userRole = console.primary_user || 'System Admin';
                         const membershipType = console.has_plus_account ? 'Plus Membership' : 'No Membership';
 
+                        // Get console type icon
+                        const getConsoleIcon = (type) => {
+                            const icons = {
+                                'PC': '🖥️',
+                                'PS5': '🎮',
+                                'PlayStation 5': '🎮',
+                                'Xbox': '🎯',
+                                'Xbox Series X/S': '🎯',
+                                'Nintendo Switch': '🕹️'
+                            };
+                            return icons[type] || '🎮';
+                        };
+
+                        // Get status display info
+                        const getStatusInfo = () => {
+                            if (console.under_maintenance == 1 || console.under_maintenance === true) {
+                                return { text: 'MAINTENANCE', icon: '🔧' };
+                            } else if (console.current_session) {
+                                return { text: 'OCCUPIED', icon: '🔴' };
+                            } else {
+                                return { text: 'AVAILABLE', icon: '🟢' };
+                            }
+                        };
+
+                        const statusInfo = getStatusInfo();
+                        const consoleIcon = getConsoleIcon(console.type);
+
                         card.innerHTML = `
-                            <div class="console-header">
-                                <h3 class="console-name">${console.name}</h3>
-                                ${consoleIcons}
+                            <div class="console-card-header">
+                                <div class="console-title-section">
+                                    <div class="console-icon">${consoleIcon}</div>
+                                    <div class="console-title-info">
+                                        <h3 class="console-name">${console.name}</h3>
+                                        <div class="console-type-badge">${console.type}</div>
+                                    </div>
+                                </div>
+                                <div class="console-status-section">
+                                    <div class="console-status status-${cardClass}">
+                                        <span class="status-icon">${statusInfo.icon}</span>
+                                        <span class="status-text">${statusInfo.text}</span>
+                                    </div>
+                                    ${consoleIcons}
+                                </div>
                             </div>
-                            <div class="console-status status-${cardClass}">${(console.under_maintenance == 1 || console.under_maintenance === true) ? 'MAINTENANCE' : (console.current_session ? 'OCCUPIED' : console.status.toUpperCase())}</div>
-                            <div class="console-specs">${console.specifications || `${console.type}, ${console.purchase_year}`}</div>
-                            <div class="console-meta">${console.type} • ${userRole} • ${console.location} • ${membershipType}</div>
-                            ${sessionContent}
+                            
+                            <div class="console-info-section">
+                                <div class="console-specs-card">
+                                    <div class="spec-item">
+                                        <span class="spec-icon">⚙️</span>
+                                        <span class="spec-text">${console.specifications || `${console.type}, ${console.purchase_year}`}</span>
+                                    </div>
+                                    <div class="spec-item">
+                                        <span class="spec-icon">📍</span>
+                                        <span class="spec-text">${console.location}</span>
+                                    </div>
+                                    <div class="spec-item">
+                                        <span class="spec-icon">👤</span>
+                                        <span class="spec-text">${userRole}</span>
+                                    </div>
+                                    <div class="spec-item">
+                                        <span class="spec-icon">${console.has_plus_account ? '⭐' : '👤'}</span>
+                                        <span class="spec-text">${membershipType}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="console-content-section">
+                                ${sessionContent}
+                            </div>
+                            
                             <div class="console-actions">
                                 ${actionButtons}
                             </div>
@@ -821,41 +888,74 @@ button:disabled {
 
     // Load F&D items for the modal
     function loadFandDItems() {
+        const grid = document.getElementById('fandd-items-grid');
+        grid.innerHTML = '<div class="loading-message">Loading delicious items...</div>';
+
         fetch(`${SITE_URL}/api/fandd.php?action=list`)
             .then(res => res.json())
             .then(result => {
                 if (result.success) {
-                    const grid = document.getElementById('fandd-items-grid');
                     grid.innerHTML = '';
 
-                    result.data.forEach(item => {
+                    result.data.forEach((item, index) => {
                         if (item.is_available && item.stock > 0) {
                             const itemCard = document.createElement('div');
+                            const stockClass = item.stock < 10 ? 'low-stock' : '';
                             itemCard.className = 'fandd-item-card';
+                            itemCard.setAttribute('data-category', item.category.toLowerCase());
+                            itemCard.style.animationDelay = `${index * 0.1}s`;
+                            
                             itemCard.innerHTML = `
-                                <div class="fandd-item-name">${item.name}</div>
-                                <div class="fandd-item-price">₹${parseFloat(item.price).toFixed(2)}</div>
-                                <div class="fandd-item-stock">Stock: ${item.stock}</div>
-                                <div class="fandd-quantity-controls">
-                                    <button type="button" class="fandd-qty-btn fandd-qty-minus" onclick="adjustQuantity(${item.id}, -1)">-</button>
-                                    <input type="number" class="fandd-qty-input" id="qty-${item.id}" value="0" min="0" max="${item.stock}" readonly>
-                                    <button type="button" class="fandd-qty-btn fandd-qty-plus" onclick="adjustQuantity(${item.id}, 1, ${item.stock})">+</button>
+                                <div class="fandd-item-header">
+                                    <div class="fandd-item-name">${item.name}</div>
+                                    <div class="fandd-item-category">${item.category.charAt(0).toUpperCase() + item.category.slice(1)}</div>
+                                </div>
+                                <div class="fandd-item-body">
+                                    <div class="fandd-item-price">₹${parseFloat(item.price).toFixed(2)}</div>
+                                    <div class="fandd-item-stock ${stockClass}">Stock: ${item.stock}</div>
+                                    <div class="fandd-quantity-controls">
+                                        <button type="button" class="fandd-qty-btn fandd-qty-minus" onclick="adjustQuantity(${item.id}, -1)" title="Decrease quantity">-</button>
+                                        <input type="number" class="fandd-qty-input" id="qty-${item.id}" value="0" min="0" max="${item.stock}" readonly>
+                                        <button type="button" class="fandd-qty-btn fandd-qty-plus" onclick="adjustQuantity(${item.id}, 1, ${item.stock})" title="Increase quantity">+</button>
+                                    </div>
                                 </div>
                                 <input type="hidden" class="fandd-item-data" data-id="${item.id}" data-name="${item.name}" data-price="${item.price}">
                             `;
+                            
+                            // Add click handler for card selection
+                            itemCard.addEventListener('click', (e) => {
+                                if (!e.target.matches('.fandd-qty-btn, .fandd-qty-input')) {
+                                    const qtyInput = itemCard.querySelector('.fandd-qty-input');
+                                    const currentQty = parseInt(qtyInput.value);
+                                    if (currentQty === 0) {
+                                        adjustQuantity(item.id, 1, item.stock);
+                                    }
+                                }
+                            });
+                            
                             grid.appendChild(itemCard);
                         }
                     });
+
+                    // Update the summary
+                    updateFandDSummary();
+                } else {
+                    grid.innerHTML = '<div class="error-message">Failed to load items. Please try again.</div>';
                 }
             })
             .catch(error => {
                 console.error('Error loading F&D items:', error);
+                grid.innerHTML = '<div class="error-message">Network error. Please check your connection.</div>';
             });
     }
 
-    // Adjust quantity for F&D items
+    // Enhanced adjust quantity for F&D items
     function adjustQuantity(itemId, change, maxStock) {
         const input = document.getElementById(`qty-${itemId}`);
+        const card = input.closest('.fandd-item-card');
+        const minusBtn = card.querySelector('.fandd-qty-minus');
+        const plusBtn = card.querySelector('.fandd-qty-plus');
+        
         let currentValue = parseInt(input.value) || 0;
         let newValue = currentValue + change;
 
@@ -863,6 +963,50 @@ button:disabled {
         if (newValue > maxStock) newValue = maxStock;
 
         input.value = newValue;
+
+        // Update button states
+        minusBtn.disabled = newValue <= 0;
+        plusBtn.disabled = newValue >= maxStock;
+
+        // Update card selection state
+        if (newValue > 0) {
+            card.classList.add('selected');
+        } else {
+            card.classList.remove('selected');
+        }
+
+        // Update summary
+        updateFandDSummary();
+    }
+
+    // Update F&D selection summary
+    function updateFandDSummary() {
+        const summaryElement = document.querySelector('.fandd-selected-summary');
+        if (!summaryElement) return;
+
+        let totalItems = 0;
+        let totalValue = 0;
+
+        document.querySelectorAll('.fandd-item-data').forEach(element => {
+            const itemId = element.dataset.id;
+            const quantity = parseInt(document.getElementById(`qty-${itemId}`).value) || 0;
+            const price = parseFloat(element.dataset.price);
+
+            if (quantity > 0) {
+                totalItems += quantity;
+                totalValue += quantity * price;
+            }
+        });
+
+        if (totalItems > 0) {
+            summaryElement.innerHTML = `
+                 ${totalItems} item${totalItems > 1 ? 's' : ''} selected - ₹${totalValue.toFixed(2)}
+            `;
+            summaryElement.style.display = 'flex';
+        } else {
+            summaryElement.innerHTML = ' No items selected';
+            summaryElement.style.display = 'flex';
+        }
     }
 
     // Confirm Add F&D
@@ -1495,65 +1639,114 @@ button:disabled {
         margin-top: 24px;
     }
 
-    /* Console Cards */
+    /* Enhanced Console Cards */
     .console-card {
         background: var(--color-surface) !important;
-        border: 2px solid var(--color-primary);
-        border-radius: 10px;
-        padding: 16px;
+        border: 1px solid var(--color-border);
+        border-radius: 12px;
+        padding: 0;
         position: relative;
-        transition: all 0.3s ease;
-        min-height: 320px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        min-height: 300px;
         display: flex;
         flex-direction: column;
+        box-shadow: var(--shadow-sm);
+        overflow: hidden;
     }
 
+
+
     .console-card:hover {
-        transform: translateY(-2px);
+        transform: translateY(-3px);
         box-shadow: var(--shadow-md);
+        border-color: var(--color-primary);
     }
 
     .console-card.occupied {
         border-color: var(--color-warning);
-        background: var(--color-surface) !important;
-    }
-
-    .console-card.available {
-        border-color: var(--color-success);
-        background: var(--color-surface) !important;
-    }
-
-    .console-card.maintenance {
-        border-color: var(--color-error);
-        background: var(--color-surface) !important;
+        background: linear-gradient(135deg, var(--color-surface) 0%, rgba(var(--color-warning-rgb), 0.03) 100%) !important;
+        animation: pulse-occupied 3s infinite;
     }
 
     .console-card.out-of-service {
         border-color: var(--color-error);
         background: var(--color-surface) !important;
+        opacity: 0.7;
+        filter: grayscale(0.4);
     }
 
-    /* Console Header */
-    .console-header {
+    /* Enhanced Console Card Header */
+    .console-card-header {
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        margin-bottom: 12px;
+        padding: 16px 16px 12px 16px;
+        background: linear-gradient(135deg, var(--color-bg-1) 0%, var(--color-bg-2) 100%);
+        border-bottom: 1px solid var(--color-border);
+        position: relative;
+    }
+
+    .console-title-section {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex: 1;
+    }
+
+    .console-icon {
+        font-size: 24px;
+        padding: 8px;
+        border-radius: 12px;
+        border: 1px solid var(--color-border);
+        box-shadow: var(--shadow-xs);
+        transition: all 0.3s ease;
+    }
+
+    .console-card:hover .console-icon {
+        transform: rotate(10deg) scale(1.1);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .console-title-info {
+        flex: 1;
     }
 
     .console-name {
         color: var(--color-text) !important;
-        font-size: 18px;
+        font-size: 16px;
         font-weight: 700;
-        margin: 0;
-        flex: 1;
+        margin: 0 0 6px 0;
+        line-height: 1.2;
+        letter-spacing: -0.01em;
         background: transparent !important;
+    }
+
+    .console-type-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 8px;
+        background: var(--color-primary);
+        color: var(--color-white);
+        border-radius: 16px;
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        box-shadow: var(--shadow-xs);
+    }
+
+    .console-status-section {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 8px;
     }
 
     /* Console Icons */
     .console-icons {
         display: flex;
-        gap: 8px;
+        gap: 6px;
     }
 
     .icon-btn {
@@ -1561,12 +1754,13 @@ button:disabled {
         border: none;
         color: var(--color-primary);
         cursor: pointer;
-        padding: 4px;
+        padding: 3px;
         border-radius: 4px;
         transition: all 0.2s ease;
         display: flex;
         align-items: center;
         justify-content: center;
+        font-size: 14px;
     }
 
     .icon-btn:hover {
@@ -1583,59 +1777,104 @@ button:disabled {
         color: var(--color-error);
     }
 
-    /* Console Status */
+    /* Compact Console Status */
     .console-status {
-        display: inline-block;
+        display: flex;
+        align-items: center;
+        gap: 4px;
         padding: 4px 10px;
-        border-radius: 16px;
-        font-size: 11px;
+        border-radius: 20px;
+        font-size: 10px;
         font-weight: 600;
         text-transform: uppercase;
-        margin-bottom: 10px;
+        letter-spacing: 0.3px;
+        box-shadow: var(--shadow-xs);
+        transition: all 0.3s ease;
     }
 
-    .console-status.available {
+    .status-icon {
+        font-size: 14px;
+        animation: pulse-icon 2s infinite;
+    }
+
+    .console-status.status-available {
         background: var(--color-success);
         color: var(--color-white);
     }
 
-    .console-status.occupied {
+    .console-status.status-occupied {
         background: var(--color-warning);
         color: var(--color-white);
     }
 
-    .console-status.maintenance {
+    .console-status.status-maintenance {
         background: var(--color-error);
         color: var(--color-white);
     }
 
-    .console-status.out-of-service {
-        background: var(--color-error);
-        color: var(--color-white);
+    /* Console Information Section */
+    .console-info-section {
+        padding: 20px 24px;
+        background: var(--color-surface);
     }
 
-    /* Console Specs */
-    .console-specs {
-        color: var(--color-text-secondary) !important;
-        font-size: 13px;
-        margin-bottom: 6px;
-        line-height: 1.3;
+    .console-specs-card {
+        background: var(--color-bg-1);
+        border-radius: 8px;
+        padding: 12px;
+        border: 1px solid var(--color-border);
+        display: grid;
+        gap: 8px;
     }
 
-    /* Console Meta */
-    .console-meta {
-        color: var(--color-text-secondary) !important;
-        font-size: 11px;
-        margin-bottom: 16px;
-        line-height: 1.3;
+    .spec-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 0;
+        border-bottom: 1px solid var(--color-border);
+        transition: all 0.2s ease;
+    }
+
+    .spec-item:last-child {
+        border-bottom: none;
+    }
+
+    .spec-item:hover {
+        background: var(--color-bg-2);
+        margin: 0 -8px;
+        padding: 8px 8px;
+        border-radius: 8px;
+    }
+
+    .spec-icon {
+        font-size: 14px;
+        width: 20px;
+        text-align: center;
+    }
+
+    .spec-text {
+        color: var(--color-text);
+        font-weight: 500;
+        font-size: 12px;
+        flex: 1;
+    }
+
+    /* Console Content Section */
+    .console-content-section {
+        flex: 1;
+        padding: 0 16px 16px 16px;
+        display: flex;
+        flex-direction: column;
+        padding-bottom:0;
     }
 
     /* Occupied Session */
     .occupied-session {
-        background: #17893bff !important;
+        background: var(--color-bg-1);
         border-radius: 6px;
         padding: 12px;
-        margin-bottom: 16px;
+        margin-bottom: 6px;
         flex: 1;
     }
 
@@ -1646,7 +1885,7 @@ button:disabled {
         text-align: center;
         margin-bottom: 12px;
         font-family: 'Courier New', monospace;
-        background: #007610ff;
+        background:var(--color-success);
         padding: 8px;
         border-radius: 6px;
     }
@@ -1656,9 +1895,11 @@ button:disabled {
     }
 
     .session-details p {
-        margin: 0 0 6px 0;
+        /* margin: 0 0 6px 0; */
         font-size: 13px;
-        color: #ffffff !important;
+        color: black !important;
+        height:20px;
+        font-weight:normal;
     }
 
     /* Session Items */
@@ -1667,7 +1908,7 @@ button:disabled {
     }
 
     .items-label {
-        color: #ffffff !important;
+        color: black !important;
         font-size: 13px;
         margin-bottom: 6px;
         font-weight: 600;
@@ -1677,18 +1918,18 @@ button:disabled {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.5);
         padding: 6px 10px;
         border-radius: 4px;
         margin-bottom: 4px;
-        color: #D1D5DB !important;
+        color: #000 !important;
         font-size: 12px;
     }
 
     .remove-item-btn {
         background: none;
         border: none;
-        color: #FF69B4 !important;
+        color: #ed288bff !important;
         cursor: pointer;
         font-size: 14px;
         padding: 2px 6px;
@@ -1721,219 +1962,607 @@ button:disabled {
         text-transform: uppercase;
     }
 
-    /* Action Buttons */
+    /* Compact Action Buttons */
     .console-actions {
         margin-top: auto;
+        padding: 12px 16px;
     }
 
     .btn--start {
         width: 100%;
-        background: #32B8C6 !important;
-        color: #ffffff !important;
-        border: none;
-        padding: 16px;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: background-color 0.2s ease;
-    }
-
-    .btn--start:hover {
-        background: #29A0B0 !important;
-    }
-
-    /* Session Controls */
-    .session-controls {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-
-    .top-buttons {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-    }
-
-    .top-buttons .btn {
-        flex: 1;
-        min-width: 80px;
-        background: #374151 !important;
-        color: #ffffff !important;
-        border: none;
-        padding: 8px 10px;
-        border-radius: 6px;
-        font-size: 12px;
-        cursor: pointer;
-        transition: background-color 0.2s ease;
-    }
-
-    .top-buttons .btn:hover {
-        background: #4B5563 !important;
-    }
-
-    .bottom-buttons {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-    }
-
-    .bottom-buttons .btn--sm {
-        background: #374151 !important;
-        color: #ffffff !important;
-        border: none;
-        padding: 8px 12px;
-        border-radius: 6px;
-        font-size: 12px;
-        cursor: pointer;
-        transition: background-color 0.2s ease;
-    }
-
-    .bottom-buttons .btn--sm:hover {
-        background: #4B5563 !important;
-    }
-
-    .bottom-buttons .btn--lg {
-        flex: 1;
-        background: #9CA3AF !important;
-        color: #1A1A1A !important;
+        background: linear-gradient(135deg, var(--color-success) 0%, var(--color-success) 100%) !important;
+        color: var(--color-white) !important;
         border: none;
         padding: 12px 16px;
         border-radius: 8px;
         font-size: 14px;
         font-weight: 600;
         cursor: pointer;
-        transition: background-color 0.2s ease;
+        transition: all 0.3s ease;
+        box-shadow: var(--shadow-xs);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .btn--start::before {
+        content: '🎮';
+        font-size: 16px;
+    }
+
+    .btn--start:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-sm);
+    }
+
+    /* Compact Session Controls */
+    .session-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        background: var(--color-bg-1);
+        padding: 12px;
+        border-radius: 8px;
+        border: 1px solid var(--color-border);
+        margin: 6px 6px;
+        width:100%;
+    }
+
+    .top-buttons {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+    }
+
+    .top-buttons .btn {
+        background: var(--color-surface) !important;
+        color: var(--color-text) !important;
+        border: 1px solid var(--color-border) !important;
+        padding: 6px 8px;
+        border-radius: 6px;
+        font-size: 10px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 3px;
+    }
+
+    .top-buttons .btn:hover {
+        background: var(--color-primary) !important;
+        color: var(--color-white) !important;
+        transform: translateY(-1px);
+    }
+
+    .top-buttons .btn:nth-child(1)::before { content: '🍕'; font-size: 12px; }
+    .top-buttons .btn:nth-child(2)::before { content: '🔄'; font-size: 12px; }
+    .top-buttons .btn:nth-child(3)::before { content: '👥'; font-size: 12px; }
+    .top-buttons .btn:nth-child(4)::before { content: '⏸️'; font-size: 12px; }
+
+    .bottom-buttons {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        margin-top: 6px;
+    }
+
+    .bottom-buttons .btn--lg {
+        flex: 1;
+        background: linear-gradient(135deg, var(--color-error) 0%, #dc2626 100%) !important;
+        color: var(--color-white) !important;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+    }
+
+    .bottom-buttons .btn--lg::before {
+        content: '🛑';
+        font-size: 14px;
     }
 
     .bottom-buttons .btn--lg:hover {
-        background: #D1D5DB !important;
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-sm);
     }
 
-    /* F&D Modal Styles */
+    /* Enhanced F&D Modal Styles */
     .fandd-modal {
-        max-width: 800px;
-        max-height: 80vh;
+        max-width: 900px;
+        max-height: 85vh;
         overflow: hidden;
         display: flex;
         flex-direction: column;
+        background: var(--color-surface);
+        border-radius: 20px;
+        box-shadow: var(--shadow-lg);
+        border: 1px solid var(--color-border);
+    }
+
+    .fandd-modal h3 {
+        background: linear-gradient(135deg, var(--color-success) 0%, var(--color-success) 100%);
+        color: var(--color-white);
+        margin: 0;
+        padding: 16px 20px;
+        border-radius: 12px 12px 0 0;
+        font-size: 18px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        position: relative;
+    }
+
+    .fandd-modal h3::before {
+        content: '🍕';
+        font-size: 20px;
+        animation: bounce 2s infinite;
+    }
+
+    .fandd-modal h3::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
     }
 
     .fandd-items-container {
         flex: 1;
         overflow-y: auto;
-        margin: 20px 0;
-        max-height: 60vh;
+        margin: 0;
+        max-height: 55vh;
+        padding: 16px 20px;
+        background: var(--color-background);
     }
 
     .fandd-items-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 15px;
-        padding: 10px;
+        gap: 16px;
+        padding: 0;
     }
 
     .fandd-item-card {
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        padding: 15px;
-        background: white;
-        transition: transform 0.2s, box-shadow 0.2s;
+        border: 2px solid var(--color-border);
+        border-radius: 16px;
+        padding: 0;
+        background: var(--color-surface);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+        cursor: pointer;
+    }
+
+    .fandd-item-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        border-radius: 16px 16px 0 0;
+    }
+
+    .fandd-item-card::after {
+        content: '🍽️';
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        font-size: 24px;
+        opacity: 0.1;
+        transition: all 0.3s ease;
     }
 
     .fandd-item-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-4px) scale(1.02);
+        box-shadow: var(--shadow-lg);
+        border-color: var(--color-primary);
+    }
+
+    .fandd-item-card:hover::after {
+        opacity: 0.3;
+        transform: rotate(15deg) scale(1.2);
+    }
+
+    .fandd-item-card.selected {
+        border-color: var(--color-success);
+        background: linear-gradient(135deg, var(--color-surface) 0%, rgba(var(--color-success-rgb), 0.05) 100%);
+        transform: scale(1.02);
+        box-shadow: var(--shadow-md), 0 0 20px rgba(var(--color-success-rgb), 0.2);
+    }
+
+    .fandd-item-header {
+        padding: 12px 16px 10px 16px;
+        border-bottom: 1px solid var(--color-border);
+        background: linear-gradient(135deg, var(--color-bg-1) 0%, var(--color-bg-2) 100%);
+        position: relative;
+        z-index: 2;
     }
 
     .fandd-item-name {
-        font-weight: bold;
-        font-size: 16px;
-        color: #333;
-        margin-bottom: 8px;
+        font-weight: 700;
+        font-size: 14px;
+        color: var(--color-text);
+        margin: 0 0 6px 0;
+        line-height: 1.2;
+        letter-spacing: -0.01em;
+    }
+
+    .fandd-item-category {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 8px;
+        background: var(--color-primary);
+        color: var(--color-white);
+        border-radius: 16px;
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+
+    .fandd-item-body {
+        padding: 16px;
     }
 
     .fandd-item-price {
         font-size: 18px;
-        font-weight: bold;
-        color: #007bff;
-        margin-bottom: 5px;
+        font-weight: 700;
+        color: var(--color-primary);
+        margin: 0 0 10px 0;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--color-bg-1);
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: 1px solid var(--color-border);
+    }
+
+    .fandd-item-price::before {
+        content: '💰';
+        font-size: 14px;
     }
 
     .fandd-item-stock {
-        color: #666;
+        color: var(--color-text-secondary);
         font-size: 14px;
-        margin-bottom: 15px;
+        margin: 0 0 20px 0;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        background: var(--color-bg-2);
+        border-radius: 8px;
+        border: 1px solid var(--color-border);
+    }
+
+    .fandd-item-stock::before {
+        content: '📦';
+        font-size: 16px;
+    }
+
+    .fandd-item-stock.low-stock {
+        color: var(--color-error);
+        background: rgba(var(--color-error-rgb), 0.1);
+        border-color: var(--color-error);
+    }
+
+    .fandd-item-stock.low-stock::before {
+        content: '⚠️';
     }
 
     .fandd-quantity-controls {
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 8px;
+        gap: 12px;
+        background: var(--color-bg-1);
+        padding: 16px;
+        border-radius: 12px;
+        border: 1px solid var(--color-border);
     }
 
     .fandd-qty-btn {
         width: 32px;
         height: 32px;
         border: none;
-        border-radius: 4px;
-        background: #007bff;
-        color: white;
-        font-size: 16px;
-        font-weight: bold;
+        border-radius: 8px;
+        background: var(--color-primary);
+        color: var(--color-white);
+        font-size: 14px;
+        font-weight: 700;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: background 0.2s;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: var(--shadow-xs);
     }
 
     .fandd-qty-btn:hover {
-        background: #0056b3;
+        background: var(--color-primary-hover);
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .fandd-qty-btn:active {
+        transform: translateY(0);
     }
 
     .fandd-qty-btn:disabled {
-        background: #ccc;
+        background: var(--color-secondary);
+        color: var(--color-text-secondary);
         cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
     }
 
     .fandd-qty-input {
         width: 50px;
         height: 32px;
         text-align: center;
-        border: 2px solid #007bff;
-        border-radius: 4px;
-        background: white;
-        font-weight: bold;
+        border: 1px solid var(--color-primary);
+        border-radius: 8px;
+        background: var(--color-surface);
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--color-text);
+        transition: all 0.2s ease;
+    }
+
+    .fandd-qty-input:focus {
+        outline: none;
+        border-color: var(--color-primary);
+        box-shadow: var(--focus-ring);
     }
 
     .fandd-modal-actions {
         display: flex;
-        justify-content: flex-end;
-        gap: 15px;
-        padding: 20px 0 0 0;
-        border-top: 1px solid #ddd;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        padding: 24px 32px;
+        border-top: 1px solid var(--color-border);
+        background: var(--color-bg-1);
+        border-radius: 0 0 20px 20px;
     }
 
-    /* Scrollbar styling for F&D modal */
+    .fandd-selected-summary {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 600;
+        color: var(--color-text);
+        background: var(--color-surface);
+        padding: 12px 16px;
+        border-radius: 12px;
+        border: 1px solid var(--color-border);
+    }
+
+    .fandd-selected-summary::before {
+        content: '🛒';
+        font-size: 18px;
+    }
+
+    .fandd-action-buttons {
+        display: flex;
+        gap: 12px;
+    }
+
+    .fandd-modal-actions .btn {
+        padding: 12px 24px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 14px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .fandd-modal-actions .btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s;
+    }
+
+    .fandd-modal-actions .btn:hover::before {
+        left: 100%;
+    }
+
+    .fandd-modal-actions .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+
+    /* Enhanced Scrollbar styling for F&D modal */
     .fandd-items-container::-webkit-scrollbar {
-        width: 8px;
+        width: 12px;
     }
 
     .fandd-items-container::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 4px;
+        background: var(--color-bg-1);
+        border-radius: 8px;
+        margin: 8px 0;
     }
 
     .fandd-items-container::-webkit-scrollbar-thumb {
-        background: #c1c1c1;
-        border-radius: 4px;
+        background: grey;
+        border-radius: 8px;
+        border: 1px solid var(--color-bg-1);
+        transition: all 0.2s ease;
     }
 
     .fandd-items-container::-webkit-scrollbar-thumb:hover {
-        background: #a8a8a8;
+        background: grey;
+        transform: scale(1.1);
+    }
+
+    /* F&D Modal Animations */
+    @keyframes bounce {
+        0%, 20%, 50%, 80%, 100% {
+            transform: translateY(0);
+        }
+        40% {
+            transform: translateY(-10px);
+        }
+        60% {
+            transform: translateY(-5px);
+        }
+    }
+
+    @keyframes slideInFromBottom {
+        from {
+            opacity: 0;
+            transform: translateY(30px) scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    @keyframes fadeInScale {
+        from {
+            opacity: 0;
+            transform: scale(0.9);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+
+    .fandd-item-card {
+        animation: slideInFromBottom 0.4s ease-out;
+    }
+
+    .fandd-item-card:nth-child(even) {
+        animation-delay: 0.1s;
+    }
+
+    .fandd-item-card:nth-child(3n) {
+        animation-delay: 0.2s;
+    }
+
+    .fandd-modal {
+        animation: fadeInScale 0.3s ease-out;
+    }
+
+    /* Category-specific item styling */
+    .fandd-item-card[data-category="beverages"] .fandd-item-category {
+        background: linear-gradient(135deg, #06b6d4, #0891b2);
+    }
+
+    .fandd-item-card[data-category="beverages"]::after {
+        content: '🥤';
+    }
+
+    .fandd-item-card[data-category="snacks"] .fandd-item-category {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+    }
+
+    .fandd-item-card[data-category="snacks"]::after {
+        content: '🍿';
+    }
+
+    .fandd-item-card[data-category="meals"] .fandd-item-category {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+    }
+
+    .fandd-item-card[data-category="meals"]::after {
+        content: '🍽️';
+    }
+
+    .fandd-item-card[data-category="desserts"] .fandd-item-category {
+        background: linear-gradient(135deg, #ec4899, #db2777);
+    }
+
+    .fandd-item-card[data-category="desserts"]::after {
+        content: '🍰';
+    }
+
+    .fandd-item-card[data-category="other"] .fandd-item-category {
+        background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    }
+
+    .fandd-item-card[data-category="other"]::after {
+        content: '🎁';
+    }
+
+    /* Loading state for F&D items */
+    .fandd-item-card.loading {
+        background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-bg-1) 50%, var(--color-surface) 75%);
+        background-size: 200px 100%;
+        animation: shimmer 1.5s infinite;
+    }
+
+    @keyframes shimmer {
+        0% {
+            background-position: -200px 0;
+        }
+        100% {
+            background-position: calc(200px + 100%) 0;
+        }
+    }
+
+    /* Responsive F&D Modal */
+    @media (max-width: 768px) {
+        .fandd-modal {
+            max-width: 95vw;
+            margin: 20px;
+        }
+
+        .fandd-items-grid {
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+
+        .fandd-modal h3 {
+            padding: 20px 24px;
+            font-size: 20px;
+        }
+
+        .fandd-items-container {
+            padding: 20px 24px;
+        }
+
+        .fandd-modal-actions {
+            flex-direction: column;
+            gap: 12px;
+            padding: 20px 24px;
+        }
+
+        .fandd-action-buttons {
+            width: 100%;
+        }
+
+        .fandd-modal-actions .btn {
+            width: 100%;
+            justify-content: center;
+        }
     }
 
     /* Billing Modal Styles */
@@ -2143,4 +2772,274 @@ button:disabled {
     }
 </style>
 
-<?php require_once __DIR__ . '/../includes/footer.php'; ?>
+<?php require_once __DIR__ . '/../includes/footer.php'; ?>  
+<style>
+/* Lo
+ading and Error States */
+    .loading-message, .error-message {
+        text-align: center;
+        padding: 40px 20px;
+        font-size: 16px;
+        font-weight: 600;
+        border-radius: 12px;
+        margin: 20px;
+    }
+
+    .loading-message {
+        background: linear-gradient(135deg, var(--color-bg-1) 0%, var(--color-bg-2) 100%);
+        color: var(--color-text);
+        border: 1px solid var(--color-border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+    }
+
+    .loading-message::before {
+        content: '🍕';
+        font-size: 24px;
+        animation: bounce 1s infinite;
+    }
+
+    .error-message {
+        background: rgba(var(--color-error-rgb), 0.1);
+        color: var(--color-error);
+        border: 1px solid var(--color-error);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+    }
+
+    .error-message::before {
+        content: '❌';
+        font-size: 24px;
+    }
+
+    /* Enhanced Modal Backdrop */
+    .modal {
+        backdrop-filter: blur(8px);
+        background: rgba(0, 0, 0, 0.6);
+    }
+
+    /* Pulse animation for selected items */
+    .fandd-item-card.selected {
+        animation: selectedPulse 2s infinite;
+    }
+
+    @keyframes selectedPulse {
+        0%, 100% {
+            box-shadow: var(--shadow-md), 0 0 20px rgba(var(--color-success-rgb), 0.2);
+        }
+        50% {
+            box-shadow: var(--shadow-lg), 0 0 30px rgba(var(--color-success-rgb), 0.4);
+        }
+    }
+
+    /* Quantity input animations */
+    .fandd-qty-input {
+        transition: all 0.3s ease;
+    }
+
+    .fandd-qty-input:focus {
+        transform: scale(1.05);
+    }
+
+    /* Button press animation */
+    .fandd-qty-btn:active {
+        transform: translateY(0) scale(0.95);
+    }
+
+    /* Enhanced tooltip styles */
+    .fandd-qty-btn[title]:hover::after {
+        content: attr(title);
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--color-text);
+        color: var(--color-surface);
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        white-space: nowrap;
+        z-index: 1000;
+        margin-bottom: 4px;
+    }
+
+    /* Success feedback animation */
+    @keyframes successFeedback {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+    }
+
+    .fandd-item-card.success-feedback {
+        animation: successFeedback 0.3s ease;
+    }
+  /* Enhanced Console Card Animations */
+    @keyframes pulse-occupied {
+        0%, 100% { 
+            box-shadow: var(--shadow-sm), 0 0 0 0 rgba(var(--color-warning-rgb), 0.4);
+        }
+        50% { 
+            box-shadow: var(--shadow-md), 0 0 0 12px rgba(var(--color-warning-rgb), 0);
+        }
+    }
+
+    @keyframes gradient-shift {
+        0%, 100% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+    }
+
+    @keyframes pulse-icon {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.2); }
+    }
+
+    @keyframes blink {
+        0%, 50% { opacity: 1; }
+        51%, 100% { opacity: 0.4; }
+    }
+
+    /* Card loading animation */
+    @keyframes slideInFromLeft {
+        from {
+            opacity: 0;
+            transform: translateX(-30px) scale(0.95);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0) scale(1);
+        }
+    }
+
+    .console-card {
+        animation: slideInFromLeft 0.5s ease-out;
+    }
+
+    .console-card:nth-child(even) {
+        animation-delay: 0.1s;
+    }
+
+    .console-card:nth-child(3n) {
+        animation-delay: 0.2s;
+    }
+
+    /* Maintenance Content Enhancement */
+    .maintenance-content {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex: 1;
+        background: linear-gradient(135deg, rgba(var(--color-error-rgb), 0.1) 0%, rgba(var(--color-error-rgb), 0.05) 100%);
+        border-radius: 12px;
+        border: 2px dashed var(--color-error);
+        margin: 16px 0;
+    }
+
+    .maintenance-text {
+        font-size: 24px;
+        font-weight: 800;
+        color: var(--color-error);
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        /* animation: blink 2s infinite; */
+    }
+
+    .maintenance-text::before {
+        content: '🔧';
+        font-size: 28px;
+    }
+
+    /* Console Type Specific Icons */
+    .console-card[data-type="pc"] .console-icon {
+        /* background: linear-gradient(135deg, #3b82f6, #1d4ed8); */
+        color: white;
+    }
+
+    .console-card[data-type="ps5"] .console-icon,
+    .console-card[data-type="playstation 5"] .console-icon {
+        /* background: linear-gradient(135deg, #1e40af, #1e3a8a); */
+        color: white;
+    }
+
+    .console-card[data-type="xbox"] .console-icon,
+    .console-card[data-type="xbox series x/s"] .console-icon {
+        /* background: linear-gradient(135deg, #16a34a, #15803d); */
+        color: white;
+    }
+
+    .console-card[data-type="nintendo switch"] .console-icon {
+        /* background: linear-gradient(135deg, #dc2626, #b91c1c); */
+        color: white;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .console-grid {
+            grid-template-columns: 1fr;
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .console-card {
+            min-height: 360px;
+        }
+
+        .console-card-header {
+            padding: 20px 20px 16px 20px;
+        }
+
+        .console-title-section {
+            gap: 12px;
+        }
+
+        .console-icon {
+            font-size: 24px;
+            padding: 8px;
+        }
+
+        .console-name {
+            font-size: 18px;
+        }
+
+        .console-info-section {
+            padding: 16px 20px;
+        }
+
+        .console-content-section {
+            padding: 0 20px 16px 20px;
+        }
+
+        .spec-item {
+            padding: 6px 0;
+        }
+
+        .spec-text {
+            font-size: 13px;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .console-card-header {
+            flex-direction: column;
+            gap: 16px;
+            align-items: flex-start;
+        }
+
+        .console-status-section {
+            align-items: flex-start;
+            flex-direction: row;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .console-icons {
+            order: 2;
+        }
+    }
+        </style>  
