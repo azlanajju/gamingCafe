@@ -150,9 +150,11 @@ require_once __DIR__ . '/../includes/header.php';
                     document.getElementById('avg-session').textContent = (data.avg_session || 0) + ' mins';
                     document.getElementById('utilization').textContent = (data.utilization || 0) + '%';
 
-                    // Update system uptime and total time
-                    document.getElementById('system-uptime').textContent = '24/7';
-                    document.getElementById('system-total-time').textContent = 'Active';
+                    // Update system uptime and total time from API
+                    const uptimeEl = document.getElementById('system-uptime');
+                    const totalTimeEl = document.getElementById('system-total-time');
+                    if (uptimeEl) uptimeEl.textContent = data.system_uptime_formatted || '--';
+                    if (totalTimeEl) totalTimeEl.textContent = (data.active_sessions || 0) + ' active';
                 }
             })
             .catch(err => console.error('Error loading stats:', err));

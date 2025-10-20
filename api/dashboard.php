@@ -55,6 +55,35 @@ try {
             $totalConsoles = $totalConsolesStmt->get_result()->fetch_assoc()['total'];
             $utilization = $totalConsoles > 0 ? ($consoleStats['active_consoles'] / $totalConsoles) * 100 : 0;
 
+            // Compute total running time across all currently active/paused sessions
+            // Sum of (now - start_time) minus pauses, including ongoing pause time
+            $uptimeStmt = $db->prepare("
+                SELECT 
+                    COUNT(*) AS active_sessions,
+                    SUM(
+                        GREATEST(
+                            TIMESTAMPDIFF(SECOND, start_time, NOW())
+                            - COALESCE(total_pause_duration, 0)
+                            - CASE 
+                                WHEN status = 'paused' AND pause_start_time IS NOT NULL 
+                                THEN TIMESTAMPDIFF(SECOND, pause_start_time, NOW())
+                                ELSE 0
+                              END,
+                            0
+                        )
+                    ) AS total_running_seconds
+                FROM gaming_sessions
+                WHERE status IN ('active', 'paused')
+            ");
+            $uptimeStmt->execute();
+            $uptimeRow = $uptimeStmt->get_result()->fetch_assoc() ?: ['active_sessions' => 0, 'total_running_seconds' => 0];
+
+            $totalRunningSeconds = intval($uptimeRow['total_running_seconds'] ?? 0);
+            $hours = floor($totalRunningSeconds / 3600);
+            $minutes = floor(($totalRunningSeconds % 3600) / 60);
+            $seconds = $totalRunningSeconds % 60;
+            $uptimeFormatted = sprintf('%02d:%02d:%02d', $hours, $minutes, $seconds);
+
             $data = [
                 'revenue' => $revenueStats['total_revenue'] ?? 0,
                 'gaming_revenue' => $revenueStats['gaming_revenue'] ?? 0,
@@ -65,7 +94,10 @@ try {
                 'active_consoles' => $consoleStats['active_consoles'] ?? 0,
                 'avg_session' => round($sessionStats['avg_duration'] ?? 0),
                 'peak_hour' => isset($peakStats['hour']) ? $peakStats['hour'] . ':00' : '--',
-                'utilization' => round($utilization, 1)
+                'utilization' => round($utilization, 1),
+                'system_uptime_seconds' => $totalRunningSeconds,
+                'system_uptime_formatted' => $uptimeFormatted,
+                'active_sessions' => intval($uptimeRow['active_sessions'] ?? 0)
             ];
 
             echo json_encode(['success' => true, 'data' => $data]);
