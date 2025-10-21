@@ -871,8 +871,11 @@ require_once __DIR__ . '/../includes/header.php';
             <td>₹${parseFloat(txn.gaming_amount || 0).toFixed(2)}</td>
             <td>₹${parseFloat(txn.fandd_amount || txn.food_amount || 0).toFixed(2)}</td>
             <td>₹${parseFloat(txn.discount_amount || 0).toFixed(2)}</td>
-            <td>₹${parseFloat(txn.total_amount || 0).toFixed(2)}</td>
-            <td>
+<td>₹${(
+  (parseFloat(txn.gaming_amount || 0) +
+   parseFloat(txn.fandd_amount || txn.food_amount || 0)) -
+   parseFloat(txn.discount_amount || 0)
+).toFixed(2)}</td>            <td>
                 ${txn.payment_method || txn.payment_status || 'pending'}
                 ${txn.payment_breakdown ? `
                     <div class="payment-breakdown">
