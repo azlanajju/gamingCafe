@@ -1152,7 +1152,7 @@ require_once __DIR__ . '/../includes/header.php';
                     </div>
 
                     <div class="receipt-total">
-                        <h2 class="grand-total">Grand Total: ₹${parseFloat(transaction.total_amount || 0).toFixed(2)}</h2>
+<h2 class="grand-total">Grand Total: ₹${(parseFloat(transaction.total_amount || 0) - parseFloat(transaction.discount_amount || 0)).toFixed(2)}</h2>
                     </div>
 
                     <div class="receipt-footer">
