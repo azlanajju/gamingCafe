@@ -1135,6 +1135,10 @@ require_once __DIR__ . '/../includes/header.php';
                                 <span>Food & Drinks:</span> ₹${parseFloat(transaction.fandd_amount || transaction.food_amount || 0).toFixed(2)}
                             </div>
                             <div class="summary-line">
+    <span>Discount:</span> ₹${parseFloat(transaction.discount_amount || 0).toFixed(2)}
+</div>
+
+                            <div class="summary-line">
                                 <span>Payment Method:</span> ${(transaction.payment_method || transaction.payment_status || 'pending').charAt(0).toUpperCase() + (transaction.payment_method || transaction.payment_status || 'pending').slice(1)}
                             </div>
                             ${transaction.payment_breakdown ? `
