@@ -419,7 +419,7 @@ require_once __DIR__ . '/../includes/header.php';
                                         <p><strong>Customer:</strong> ${session.customer_name}</p>
                                         <p><strong>Current Players:</strong> ${session.player_count}</p>
                                         <p><strong>Rate Type:</strong> ${session.rate_type.charAt(0).toUpperCase() + session.rate_type.slice(1)}</p>
-                                        <p><strong>Started:</strong> ${session.start_time_formatted || 'Unknown'}</p>
+                                        <p><strong></strong> </p>
                                         ${itemsDisplay}
                                     </div>
                                 </div>
