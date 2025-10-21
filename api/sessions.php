@@ -216,6 +216,7 @@ class SessionManager
     {
         $input = json_decode(file_get_contents('php://input'), true);
         $console_id = $input['console_id'] ?? null;
+        $reason = $input['reason'] ?? 'No reason provided';
 
         if (!$console_id) {
             return ['success' => false, 'message' => 'Console ID is required'];
@@ -231,20 +232,40 @@ class SessionManager
             return ['success' => false, 'message' => 'No active session found'];
         }
 
-        // Update session
-        $pause_time = date('Y-m-d H:i:s');
-        $stmt = $this->db->prepare("
-            UPDATE gaming_sessions 
-            SET status = 'paused', pause_start_time = ?
-            WHERE id = ?
-        ");
-        $stmt->bind_param("si", $pause_time, $session['id']);
+        // Start transaction
+        $this->db->begin_transaction();
 
-        if ($stmt->execute()) {
-            $this->logActivity("Paused gaming session on console {$console_id}", $console_id);
+        try {
+            // Update session
+            $pause_time = date('Y-m-d H:i:s');
+            $stmt = $this->db->prepare("
+                UPDATE gaming_sessions 
+                SET status = 'paused', pause_start_time = ?
+                WHERE id = ?
+            ");
+            $stmt->bind_param("si", $pause_time, $session['id']);
+
+            if (!$stmt->execute()) {
+                throw new Exception('Failed to update session status');
+            }
+
+            // Insert pause record into session_pauses table
+            $pauseStmt = $this->db->prepare("
+                INSERT INTO session_pauses (session_id, pause_start, reason) 
+                VALUES (?, ?, ?)
+            ");
+            $pauseStmt->bind_param("iss", $session['id'], $pause_time, $reason);
+
+            if (!$pauseStmt->execute()) {
+                throw new Exception('Failed to record pause details');
+            }
+
+            $this->db->commit();
+            $this->logActivity("Paused gaming session on console {$console_id} - Reason: {$reason}", $console_id);
             return ['success' => true, 'message' => 'Session paused successfully'];
-        } else {
-            return ['success' => false, 'message' => 'Failed to pause session'];
+        } catch (Exception $e) {
+            $this->db->rollback();
+            return ['success' => false, 'message' => 'Failed to pause session: ' . $e->getMessage()];
         }
     }
 
@@ -267,29 +288,55 @@ class SessionManager
             return ['success' => false, 'message' => 'No paused session found'];
         }
 
-        // Calculate pause duration and update session
-        $pause_duration = 0;
-        if ($session['pause_start_time']) {
-            $pause_start = new DateTime($session['pause_start_time']);
-            $pause_duration = time() - $pause_start->getTimestamp();
-        }
+        // Start transaction
+        $this->db->begin_transaction();
 
-        $resume_time = date('Y-m-d H:i:s');
-        $stmt = $this->db->prepare("
-            UPDATE gaming_sessions 
-            SET status = 'active', 
-                pause_start_time = NULL,
-                total_pause_duration = COALESCE(total_pause_duration, 0) + ?,
-                last_resume_time = ?
-            WHERE id = ?
-        ");
-        $stmt->bind_param("isi", $pause_duration, $resume_time, $session['id']);
+        try {
+            // Calculate pause duration
+            $pause_duration = 0;
+            if ($session['pause_start_time']) {
+                $pause_start = new DateTime($session['pause_start_time']);
+                $pause_duration = time() - $pause_start->getTimestamp();
+            }
 
-        if ($stmt->execute()) {
+            $resume_time = date('Y-m-d H:i:s');
+
+            // Update session status and add pause duration to total
+            $stmt = $this->db->prepare("
+                UPDATE gaming_sessions 
+                SET status = 'active', 
+                    pause_start_time = NULL,
+                    total_pause_duration = COALESCE(total_pause_duration, 0) + ?,
+                    last_resume_time = ?
+                WHERE id = ?
+            ");
+            $stmt->bind_param("isi", $pause_duration, $resume_time, $session['id']);
+
+            if (!$stmt->execute()) {
+                throw new Exception('Failed to update session status');
+            }
+
+            // Update the latest pause record with end time and duration
+            $pauseStmt = $this->db->prepare("
+                UPDATE session_pauses 
+                SET pause_end = ?, duration = ?
+                WHERE session_id = ? AND pause_end IS NULL
+                ORDER BY id DESC
+                LIMIT 1
+            ");
+            $duration_minutes = max(0, round($pause_duration / 60));
+            $pauseStmt->bind_param("sii", $resume_time, $duration_minutes, $session['id']);
+
+            if (!$pauseStmt->execute()) {
+                throw new Exception('Failed to update pause record');
+            }
+
+            $this->db->commit();
             $this->logActivity("Resumed gaming session on console {$console_id}", $console_id);
             return ['success' => true, 'message' => 'Session resumed successfully'];
-        } else {
-            return ['success' => false, 'message' => 'Failed to resume session'];
+        } catch (Exception $e) {
+            $this->db->rollback();
+            return ['success' => false, 'message' => 'Failed to resume session: ' . $e->getMessage()];
         }
     }
 
@@ -313,28 +360,22 @@ class SessionManager
                 return ['success' => false, 'message' => 'No active session found'];
             }
 
-            // Calculate final amounts
-            $end_time = date('Y-m-d H:i:s');
-            $start_time = new DateTime($session['start_time']);
-            $end_datetime = new DateTime($end_time);
-            $total_seconds = $end_datetime->getTimestamp() - $start_time->getTimestamp();
-            $pause_duration = $session['total_pause_duration'] ?? 0;
-            $actual_play_time = $total_seconds - $pause_duration;
+            // Get accurate billing details using segment-based calculation
+            $_GET['session_id'] = $session['id']; // Set session_id for getPreBillingDetails
+            $billing_details = $this->getPreBillingDetails();
 
-            // Calculate billing using pricing table
-            $billing_data = $this->calculateSessionBilling($actual_play_time, $session['player_count'], $session['rate_type']);
+            if (!$billing_details['success']) {
+                return ['success' => false, 'message' => 'Failed to calculate billing: ' . $billing_details['message']];
+            }
 
-            // Get F&D total
-            $fandd_total = $this->getSessionFandDTotal($session['id']);
-
-            // Calculate totals
-            $gaming_amount = $billing_data['total_amount'];
-            $subtotal = $gaming_amount + $fandd_total;
-            $tax_rate = $this->getTaxRate();
-            $tax_amount = $subtotal * $tax_rate;
-            $total_amount = $subtotal + $tax_amount;
+            $billing_data = $billing_details['data'];
+            $gaming_amount = $billing_data['gaming_amount'];
+            $fandd_total = $billing_data['fandd_amount'];
+            $tax_amount = $billing_data['tax_amount'];
+            $total_amount = $billing_data['total_amount'];
 
             // End the current active segment
+            $end_time = date('Y-m-d H:i:s');
             $this->endCurrentActiveSegment($session['id'], $end_time, $session['player_count'], $session['rate_type']);
 
             // Start transaction
@@ -352,7 +393,8 @@ class SessionManager
                     payment_status = 'pending' 
                 WHERE id = ?
             ");
-                $stmt->bind_param("sdddi", $end_time, $total_amount, $fandd_total, $actual_play_time, $session['id']);
+                $total_duration_seconds = $billing_data['duration_minutes'] * 60;
+                $stmt->bind_param("sdddi", $end_time, $total_amount, $fandd_total, $total_duration_seconds, $session['id']);
 
                 if (!$stmt->execute()) {
                     throw new Exception('Failed to update session status to completed');
@@ -383,7 +425,7 @@ class SessionManager
                         'gaming_amount' => $gaming_amount,
                         'fandd_amount' => $fandd_total,
                         'tax_amount' => $tax_amount,
-                        'duration_minutes' => round($actual_play_time / 60),
+                        'duration_minutes' => $billing_data['duration_minutes'],
                         'billing_details' => $billing_data,
                         'fandd_items' => $fandd_items
                     ]
@@ -783,14 +825,68 @@ class SessionManager
             return ['success' => false, 'message' => 'No active session found'];
         }
 
-        // Calculate total elapsed time
-        $total_elapsed = $session['elapsed_seconds'] - $session['pause_seconds'];
+        // Get the current active segment (the one without end_time)
+        $segmentStmt = $this->db->prepare("
+            SELECT start_time, end_time, duration, player_count
+            FROM session_segments 
+            WHERE session_id = ? AND end_time IS NULL
+            ORDER BY start_time DESC 
+            LIMIT 1
+        ");
+        $segmentStmt->bind_param("i", $session['id']);
+        $segmentStmt->execute();
+        $currentSegment = $segmentStmt->get_result()->fetch_assoc();
 
-        // If session is paused, add the current pause duration
-        if ($session['status'] === 'paused' && $session['pause_start_time']) {
-            $pause_start = new DateTime($session['pause_start_time']);
-            $current_pause_duration = time() - $pause_start->getTimestamp();
-            $total_elapsed -= $current_pause_duration;
+        if (!$currentSegment) {
+            // Fallback to total session time if no active segment found
+            $total_elapsed = $session['elapsed_seconds'] - $session['pause_seconds'];
+            if ($session['status'] === 'paused' && $session['pause_start_time']) {
+                $pause_start = new DateTime($session['pause_start_time']);
+                $current_pause_duration = time() - $pause_start->getTimestamp();
+                $total_elapsed -= $current_pause_duration;
+            }
+        } else {
+            // Calculate current segment duration
+            $segment_start_time = new DateTime($currentSegment['start_time']);
+
+            // Determine the end time for calculation
+            if ($session['status'] === 'paused' && $session['pause_start_time']) {
+                // If currently paused, calculate up to the pause start time
+                $pause_start = new DateTime($session['pause_start_time']);
+                $end_time = $segment_start_time < $pause_start ? $pause_start : new DateTime();
+            } else {
+                // If active, calculate up to now
+                $end_time = new DateTime();
+            }
+
+            $segment_elapsed = $end_time->getTimestamp() - $segment_start_time->getTimestamp();
+
+            // Get pause time that occurred during this segment from session_pauses table
+            $pauseStmt = $this->db->prepare("
+                SELECT 
+                    SUM(CASE 
+                        WHEN pause_end IS NOT NULL THEN duration * 60 
+                        ELSE 0 
+                    END) as completed_pause_seconds,
+                    SUM(CASE 
+                        WHEN pause_end IS NULL AND pause_start >= ? AND pause_start < ? THEN 
+                            TIMESTAMPDIFF(SECOND, pause_start, NOW())
+                        ELSE 0 
+                    END) as ongoing_pause_seconds
+                FROM session_pauses 
+                WHERE session_id = ? 
+                AND pause_start >= ? 
+                AND pause_start < ?
+            ");
+            $end_time_str = $end_time->format('Y-m-d H:i:s');
+            $segment_start_str = $segment_start_time->format('Y-m-d H:i:s');
+            $pauseStmt->bind_param("ssiss", $segment_start_str, $end_time_str, $session['id'], $segment_start_str, $end_time_str);
+            $pauseStmt->execute();
+            $pauseResult = $pauseStmt->get_result()->fetch_assoc();
+            $pause_during_segment = ($pauseResult['completed_pause_seconds'] ?? 0) + ($pauseResult['ongoing_pause_seconds'] ?? 0);
+
+
+            $total_elapsed = max(0, $segment_elapsed - $pause_during_segment);
         }
 
         $hours = floor($total_elapsed / 3600);
@@ -1075,16 +1171,31 @@ class SessionManager
             $segment_end_time = $segment['end_time'] ? new DateTime($segment['end_time']) : $end_datetime;
             $segment_duration_seconds = $segment_end_time->getTimestamp() - $segment_start_time->getTimestamp();
 
-            // For the currently active segment (if end_time is null), consider current pause
-            if (!$segment['end_time'] && $session['status'] === 'paused' && $session['pause_start_time']) {
-                $current_pause_start = new DateTime($session['pause_start_time']);
-                // Only subtract pause time if the segment started before the pause and is still active during the pause
-                if ($segment_start_time < $current_pause_start) {
-                    $segment_duration_seconds -= (time() - $current_pause_start->getTimestamp());
-                }
-            }
+            // Calculate pause time that occurred during this specific segment
+            $pauseStmt = $this->db->prepare("
+                SELECT 
+                    SUM(CASE 
+                        WHEN pause_end IS NOT NULL THEN duration * 60 
+                        ELSE 0 
+                    END) as completed_pause_seconds,
+                    SUM(CASE 
+                        WHEN pause_end IS NULL AND pause_start >= ? AND pause_start < ? THEN 
+                            TIMESTAMPDIFF(SECOND, pause_start, ?)
+                        ELSE 0 
+                    END) as ongoing_pause_seconds
+                FROM session_pauses 
+                WHERE session_id = ? 
+                AND pause_start >= ? 
+                AND pause_start < ?
+            ");
+            $segment_start_str = $segment_start_time->format('Y-m-d H:i:s');
+            $segment_end_str = $segment_end_time->format('Y-m-d H:i:s');
+            $pauseStmt->bind_param("ssssss", $segment_start_str, $segment_end_str, $segment_end_str, $session['id'], $segment_start_str, $segment_end_str);
+            $pauseStmt->execute();
+            $pauseResult = $pauseStmt->get_result()->fetch_assoc();
+            $pause_during_segment = ($pauseResult['completed_pause_seconds'] ?? 0) + ($pauseResult['ongoing_pause_seconds'] ?? 0);
 
-            $segment_actual_play_time = max(0, $segment_duration_seconds);
+            $segment_actual_play_time = max(0, $segment_duration_seconds - $pause_during_segment);
             $segment_billing = $this->calculateSessionBilling($segment_actual_play_time, $segment['player_count'], $session['rate_type']);
             $segment['calculated_amount'] = $segment_billing['total_amount'];
             $segment['calculated_duration_minutes'] = round($segment_actual_play_time / 60);
@@ -1095,6 +1206,19 @@ class SessionManager
 
         // Get F&D total
         $fandd_total = $this->getSessionFandDTotal($session['id']);
+
+        // Get pause history
+        $pauses = [];
+        $pauseStmt = $this->db->prepare("
+            SELECT pause_start, pause_end, reason, duration 
+            FROM session_pauses 
+            WHERE session_id = ? 
+            ORDER BY pause_start ASC
+        ");
+        $pauseStmt->bind_param("i", $session['id']);
+        if ($pauseStmt->execute()) {
+            $pauses = $pauseStmt->get_result()->fetch_all(MYSQLI_ASSOC);
+        }
 
         // Calculate totals based on summed gaming amount and fandd
         $subtotal = $total_gaming_amount + $fandd_total;
@@ -1112,6 +1236,7 @@ class SessionManager
                 'customer_number' => $session['customer_number'],
                 'player_count' => $session['player_count'], // Current player count of the session
                 'rate_type' => $session['rate_type'],
+                'start_time' => $session['start_time'], // Session start time for total elapsed calculation
                 'total_amount' => $total_amount,
                 'gaming_amount' => $total_gaming_amount,
                 'fandd_amount' => $fandd_total,
@@ -1119,7 +1244,8 @@ class SessionManager
                 'duration_minutes' => round($total_actual_play_time_segments / 60),
                 'billing_details' => ['segments' => $segments], // Pass segments as part of billing details
                 'fandd_items' => $this->getSessionFandDItems($session['id']),
-                'segments' => $segments // Also pass segments directly for easier access on frontend
+                'segments' => $segments, // Also pass segments directly for easier access on frontend
+                'pauses' => $pauses // Pass pause history
             ]
         ];
     }

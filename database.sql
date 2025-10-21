@@ -398,9 +398,7 @@ ALTER TABLE `game_console_assignments`
   ADD CONSTRAINT `fk_game_console_game` FOREIGN KEY (`game_id`) REFERENCES `games` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_game_console_console` FOREIGN KEY (`console_id`) REFERENCES `consoles` (`id`) ON DELETE CASCADE;
 
-ALTER TABLE `sessions`
-  ADD CONSTRAINT `fk_session_console` FOREIGN KEY (`console_id`) REFERENCES `consoles` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `fk_session_user` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+-- Note: sessions table was renamed to gaming_sessions, constraints are defined below
 
 ALTER TABLE `gaming_sessions`
   ADD CONSTRAINT `fk_gaming_session_console` FOREIGN KEY (`console_id`) REFERENCES `consoles` (`id`) ON DELETE CASCADE,

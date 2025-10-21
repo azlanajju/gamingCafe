@@ -34,9 +34,11 @@ try {
 
                 echo json_encode(['success' => true, 'data' => $coupons]);
             } elseif ($action === 'calculate_time_bonus') {
-                // Calculate time bonus discount
+                // Calculate time bonus discount with proper pricing
                 $code = $_GET['code'] ?? '';
                 $duration_minutes = intval($_GET['duration'] ?? 0);
+                $player_count = intval($_GET['player_count'] ?? 1);
+                $rate_type = $_GET['rate_type'] ?? 'regular';
 
                 $stmt = $db->prepare("SELECT * FROM coupons WHERE code = ? AND status = 'Active' AND discount_type = 'time_bonus' LIMIT 1");
                 $stmt->bind_param("s", $code);
@@ -48,23 +50,28 @@ try {
                     $bonus_minutes = intval($row['bonus_minutes']);
                     $loop_bonus = $row['loop_bonus'] == 1;
 
-                    $total_bonus = 0;
+                    $total_bonus_minutes = 0;
+                    $discount_amount = 0;
 
                     if ($duration_minutes >= $base_minutes) {
                         if ($loop_bonus) {
                             // Loop bonus: calculate how many complete cycles and give bonus for each
                             $cycles = floor($duration_minutes / $base_minutes);
-                            $total_bonus = $cycles * $bonus_minutes;
+                            $total_bonus_minutes = $cycles * $bonus_minutes;
                         } else {
                             // No loop: only give bonus once
-                            $total_bonus = $bonus_minutes;
+                            $total_bonus_minutes = $bonus_minutes;
                         }
+
+                        // Calculate the discount amount based on pricing table
+                        $discount_amount = calculateTimeBonusDiscount($db, $total_bonus_minutes, $player_count, $rate_type);
                     }
 
                     echo json_encode([
                         'success' => true,
                         'data' => [
-                            'bonus_minutes' => $total_bonus,
+                            'bonus_minutes' => $total_bonus_minutes,
+                            'discount_amount' => $discount_amount,
                             'base_minutes' => $base_minutes,
                             'bonus_per_cycle' => $bonus_minutes,
                             'loop_bonus' => $loop_bonus,
@@ -209,4 +216,50 @@ try {
     }
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+}
+
+// Function to calculate time bonus discount based on pricing table
+function calculateTimeBonusDiscount($db, $bonus_minutes, $player_count, $rate_type)
+{
+    if ($bonus_minutes <= 0) {
+        return 0;
+    }
+
+    // Get pricing from database
+    $stmt = $db->prepare("
+        SELECT * FROM pricing 
+        WHERE rate_type = ? AND player_count = ?
+    ");
+    $stmt->bind_param("si", $rate_type, $player_count);
+    $stmt->execute();
+    $pricing = $stmt->get_result()->fetch_assoc();
+
+    if (!$pricing) {
+        // Fallback: return 0 if no pricing found
+        return 0;
+    }
+
+    // Calculate discount amount based on duration brackets
+    $discount_amount = 0;
+
+    // Handle different duration brackets for bonus minutes
+    if ($bonus_minutes <= 15) {
+        $discount_amount = $pricing['duration_15'] ?? 0;
+    } elseif ($bonus_minutes <= 30) {
+        $discount_amount = $pricing['duration_30'] ?? 0;
+    } elseif ($bonus_minutes <= 45) {
+        $discount_amount = $pricing['duration_45'] ?? 0;
+    } else {
+        $discount_amount = $pricing['duration_60'] ?? 0;
+
+        // For bonus minutes longer than 60 minutes, add additional hourly charges
+        if ($bonus_minutes > 60) {
+            $additional_hours = ceil(($bonus_minutes - 60) / 60);
+            $hourly_rate = $pricing['duration_60'] ?? 0;
+            $additional_amount = $additional_hours * $hourly_rate;
+            $discount_amount += $additional_amount;
+        }
+    }
+
+    return $discount_amount;
 }

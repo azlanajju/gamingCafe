@@ -157,6 +157,35 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 </div>
 
+<!-- Pause Session Modal -->
+<div id="pause-session-modal" class="modal hidden">
+    <div class="modal-content">
+        <h3>Pause Session</h3>
+        <input type="hidden" id="pause-console-id">
+        <div class="form-group">
+            <label class="form-label">Pause Reason *</label>
+            <select class="form-control" id="pause-reason" required>
+                <option value="">Select a reason</option>
+                <option value="Customer Break">Customer Break</option>
+                <option value="Technical Issue">Technical Issue</option>
+                <option value="Food Order">Food Order</option>
+                <option value="Bathroom Break">Bathroom Break</option>
+                <option value="Phone Call">Phone Call</option>
+                <option value="Console Maintenance">Console Maintenance</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+        <div class="form-group" id="custom-reason-group" style="display: none;">
+            <label class="form-label">Custom Reason *</label>
+            <input type="text" class="form-control" id="custom-pause-reason" placeholder="Enter custom reason">
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="btn btn--secondary" id="cancel-pause">Cancel</button>
+            <button type="button" class="btn btn--primary" id="confirm-pause-btn">Pause Session</button>
+        </div>
+    </div>
+</div>
+
 <!-- Add F&D Modal -->
 <div id="add-fandd-modal" class="modal hidden">
     <div class="modal-content fandd-modal">
@@ -199,7 +228,8 @@ require_once __DIR__ . '/../includes/header.php';
 
             <div class="customer-info">
                 <p><strong>Customer Name:</strong> <span id="billing-customer-name"></span></p>
-                <p><strong>Total Duration:</strong> <span id="billing-duration"></span></p>
+                <p><strong>Total Elapsed Time:</strong> <span id="billing-total-duration"></span></p>
+                <p><strong>Actual Billed Time:</strong> <span id="billing-billed-duration"></span></p>
                 <p><strong>Session Date:</strong> <span id="billing-date"></span></p>
             </div>
 
@@ -403,11 +433,11 @@ require_once __DIR__ . '/../includes/header.php';
                                         <button class="btn btn--sm btn--secondary" onclick="showChangePlayersModal(${console.id})">Change Players</button>
                                         ${session.is_paused ? 
                                             `<button class="btn btn--sm btn--secondary" onclick="resumeSession(${console.id})">▶ Resume</button>` :
-                                            `<button class="btn btn--sm btn--secondary" onclick="pauseSession(${console.id})">⏸ Pause</button>`
+                                            `<button class="btn btn--sm btn--secondary" onclick="showPauseModal(${console.id})">⏸ Pause</button>`
                                         }
                                     </div>
                                     <div class="bottom-buttons">
-                                        <button class="btn btn--lg btn--danger" onclick="endSession(${console.id})">End Session</button>
+                                        <button class="btn btn--lg btn--danger" onclick="endSession(${console.id})" ${session.is_paused ? 'disabled title="Cannot end session while paused"' : ''}>End Session</button>
                                     </div>
                                 </div>
                             `;
@@ -703,15 +733,25 @@ require_once __DIR__ . '/../includes/header.php';
             });
     }
 
+    // Show Pause Modal
+    function showPauseModal(consoleId) {
+        document.getElementById('pause-console-id').value = consoleId;
+        document.getElementById('pause-reason').value = '';
+        document.getElementById('custom-pause-reason').value = '';
+        document.getElementById('custom-reason-group').style.display = 'none';
+        document.getElementById('pause-session-modal').classList.remove('hidden');
+    }
+
     // Pause Session
-    function pauseSession(consoleId) {
+    function pauseSession(consoleId, reason) {
         fetch(`${SITE_URL}/api/sessions.php?action=pause`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    console_id: consoleId
+                    console_id: consoleId,
+                    reason: reason
                 })
             })
             .then(res => res.json())
@@ -724,6 +764,7 @@ require_once __DIR__ . '/../includes/header.php';
                         delete sessionTimers[consoleId];
                     }
                     loadConsoles();
+                    document.getElementById('pause-session-modal').classList.add('hidden');
                 } else {
                     alert('Error: ' + result.message);
                 }
@@ -755,8 +796,17 @@ require_once __DIR__ . '/../includes/header.php';
 
     // End Session
     function endSession(consoleId) {
+        // Check if session is paused
+        const consoleCard = document.querySelector(`.console-card[data-console-id="${consoleId}"]`);
+        if (consoleCard) {
+            const endButton = consoleCard.querySelector('.btn--lg');
+            if (endButton && endButton.disabled) {
+                alert('Cannot end session while it is paused. Please resume the session first.');
+                return;
+            }
+        }
+
         if (confirm('Are you sure you want to end this session?')) {
-            const consoleCard = document.querySelector(`.console-card[data-console-id="${consoleId}"]`);
             if (!consoleCard) {
                 alert('Console card not found.');
                 return;
@@ -1135,12 +1185,24 @@ require_once __DIR__ . '/../includes/header.php';
         // Populate customer info
         document.getElementById('billing-customer-name').textContent = billingData.customer_name || 'Unknown';
 
-        // Format duration
-        const hours = Math.floor(billingData.duration_minutes / 60);
-        const minutes = billingData.duration_minutes % 60;
-        const seconds = 0; // We don't have seconds in the data
-        document.getElementById('billing-duration').textContent =
-            `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        // Calculate total elapsed time (from session start to now, including pauses)
+        const sessionStart = new Date(billingData.session_start_time || billingData.start_time);
+        const now = new Date();
+        const totalElapsedMs = now.getTime() - sessionStart.getTime();
+        const totalElapsedMinutes = Math.floor(totalElapsedMs / (1000 * 60));
+        const totalElapsedHours = Math.floor(totalElapsedMinutes / 60);
+        const totalElapsedMins = totalElapsedMinutes % 60;
+        const totalElapsedSecs = Math.floor((totalElapsedMs % (1000 * 60)) / 1000);
+
+        document.getElementById('billing-total-duration').textContent =
+            `${totalElapsedHours.toString().padStart(2, '0')}:${totalElapsedMins.toString().padStart(2, '0')}:${totalElapsedSecs.toString().padStart(2, '0')}`;
+
+        // Format billed duration (actual play time, excluding pauses)
+        const billedHours = Math.floor(billingData.duration_minutes / 60);
+        const billedMinutes = billingData.duration_minutes % 60;
+        const billedSeconds = 0; // We don't have seconds in the data
+        document.getElementById('billing-billed-duration').textContent =
+            `${billedHours.toString().padStart(2, '0')}:${billedMinutes.toString().padStart(2, '0')}:${billedSeconds.toString().padStart(2, '0')}`;
 
         // Set current date
         const currentDate = new Date().toLocaleDateString('en-IN');
@@ -1152,26 +1214,36 @@ require_once __DIR__ . '/../includes/header.php';
 
         if (billingData.segments && billingData.segments.length > 0) {
             billingData.segments.forEach(segment => {
-                // Calculate segment duration for display
-                let segmentDurationMinutes = segment.duration; // Use already calculated duration if available
-                if (!segment.end_time) {
-                    // If it's the active segment, calculate duration from start_time to now
-                    const start = new Date(segment.start_time);
-                    const now = new Date();
-                    segmentDurationMinutes = Math.round((now.getTime() - start.getTime()) / (1000 * 60));
-                }
+                // Calculate total elapsed time for this segment (including pauses)
+                const segmentStart = new Date(segment.start_time);
+                const segmentEnd = segment.end_time ? new Date(segment.end_time) : new Date();
+                const totalElapsedMs = segmentEnd.getTime() - segmentStart.getTime();
+                const totalElapsedMinutes = Math.floor(totalElapsedMs / (1000 * 60));
+                const totalElapsedHours = Math.floor(totalElapsedMinutes / 60);
+                const totalElapsedMins = totalElapsedMinutes % 60;
+                const totalElapsedSecs = Math.floor((totalElapsedMs % (1000 * 60)) / 1000);
 
-                const segmentHours = Math.floor(segmentDurationMinutes / 60);
-                const segmentMinutes = segmentDurationMinutes % 60;
-                const segmentSeconds = 0; // Assuming duration is in minutes
+                const formattedTotalDuration =
+                    `${totalElapsedHours.toString().padStart(2, '0')}:${totalElapsedMins.toString().padStart(2, '0')}:${totalElapsedSecs.toString().padStart(2, '0')}`;
 
-                const formattedSegmentDuration =
-                    `${segmentHours.toString().padStart(2, '0')}:${segmentMinutes.toString().padStart(2, '0')}:${segmentSeconds.toString().padStart(2, '0')}`;
+                // Calculate billed time (actual play time, excluding pauses)
+                const billedMinutes = segment.calculated_duration_minutes || segment.duration || 0;
+                const billedHours = Math.floor(billedMinutes / 60);
+                const billedMins = billedMinutes % 60;
+                const billedSecs = 0;
+
+                const formattedBilledDuration =
+                    `${billedHours.toString().padStart(2, '0')}:${billedMins.toString().padStart(2, '0')}:${billedSecs.toString().padStart(2, '0')}`;
 
                 gamingSegmentsList.innerHTML += `
                     <div class="segment-item">
-                        <span>${segment.player_count} players (${formattedSegmentDuration})</span>
-                        <span>₹${parseFloat(segment.calculated_amount || 0).toFixed(2)}</span>
+                        <div class="segment-details">
+                            <div class="segment-header">${segment.player_count} players</div>
+                            <div class="segment-times">
+                                <small>Total: ${formattedTotalDuration} | Billed: ${formattedBilledDuration}</small>
+                            </div>
+                        </div>
+                        <span class="segment-amount">₹${parseFloat(segment.calculated_amount || 0).toFixed(2)}</span>
                     </div>
                 `;
             });
@@ -1179,7 +1251,26 @@ require_once __DIR__ . '/../includes/header.php';
             gamingSegmentsList.innerHTML = '<p>No gaming segments recorded</p>';
         }
 
-        document.getElementById('pause-history').textContent = 'No pauses for this session.'; // Placeholder, update if pause history is available
+        // Display pause history
+        const pauseHistoryEl = document.getElementById('pause-history');
+        if (billingData.pauses && billingData.pauses.length > 0) {
+            let pauseHistoryHtml = '<div class="pause-list">';
+            billingData.pauses.forEach((pause, index) => {
+                const startTime = new Date(pause.pause_start).toLocaleTimeString();
+                const endTime = pause.pause_end ? new Date(pause.pause_end).toLocaleTimeString() : 'Ongoing';
+                const duration = pause.duration ? `${pause.duration} min` : 'Calculating...';
+                pauseHistoryHtml += `
+                    <div class="pause-item">
+                        <strong>Pause ${index + 1}:</strong> ${pause.reason}<br>
+                        <small>From: ${startTime} | To: ${endTime} | Duration: ${duration}</small>
+                    </div>
+                `;
+            });
+            pauseHistoryHtml += '</div>';
+            pauseHistoryEl.innerHTML = pauseHistoryHtml;
+        } else {
+            pauseHistoryEl.textContent = 'No pauses for this session.';
+        }
         document.getElementById('gaming-total-amount').textContent = parseFloat(billingData.gaming_amount || 0).toFixed(2);
 
         // Populate food & drinks
@@ -1289,7 +1380,29 @@ require_once __DIR__ . '/../includes/header.php';
             .then(result => {
                 if (result.success) {
                     appliedCoupon = result.data;
-                    updateBillingAmounts();
+
+                    // If it's a time bonus coupon, get the proper discount calculation
+                    if (appliedCoupon.discount_type === 'time_bonus') {
+                        const totalPlayTime = currentBillingData.duration_minutes || 0;
+                        const playerCount = currentBillingData.player_count || 1;
+                        const rateType = currentBillingData.rate_type || 'regular';
+
+                        return fetch(`${SITE_URL}/api/coupons.php?action=calculate_time_bonus&code=${couponCode}&duration=${totalPlayTime}&player_count=${playerCount}&rate_type=${rateType}`)
+                            .then(res => res.json())
+                            .then(bonusResult => {
+                                console.log('Time bonus API response:', bonusResult);
+                                if (bonusResult.success) {
+                                    // Update the coupon with the calculated discount amount
+                                    appliedCoupon.calculated_discount = bonusResult.data.discount_amount;
+                                    appliedCoupon.bonus_minutes = bonusResult.data.bonus_minutes;
+                                    appliedCoupon.cycles = bonusResult.data.cycles;
+                                    console.log('Updated appliedCoupon:', appliedCoupon);
+                                }
+                                updateBillingAmounts();
+                            });
+                    } else {
+                        updateBillingAmounts();
+                    }
 
                     // Show success message
                     let discountText = '';
@@ -1297,6 +1410,26 @@ require_once __DIR__ . '/../includes/header.php';
                         discountText = `${appliedCoupon.discount_value}% discount (₹${appliedCoupon.calculated_discount.toFixed(2)})`;
                     } else if (appliedCoupon.discount_type === 'flat') {
                         discountText = `₹${appliedCoupon.discount_value} discount`;
+                    } else if (appliedCoupon.discount_type === 'time_bonus') {
+                        const totalPlayTime = currentBillingData.duration_minutes || 0;
+                        const baseMinutes = parseInt(appliedCoupon.base_minutes) || 0;
+                        const bonusMinutes = parseInt(appliedCoupon.bonus_minutes) || 0;
+                        const loopBonus = appliedCoupon.loop_bonus == 1;
+
+                        let bonusText = '';
+                        if (totalPlayTime >= baseMinutes) {
+                            const totalBonusMinutes = appliedCoupon.bonus_minutes || 0;
+                            const cycles = appliedCoupon.cycles || 0;
+
+                            if (loopBonus && cycles > 1) {
+                                bonusText = `${totalBonusMinutes} minutes free (${cycles} cycles × ${bonusMinutes} min)`;
+                            } else {
+                                bonusText = `${totalBonusMinutes} minutes free`;
+                            }
+                        } else {
+                            bonusText = `Play ${baseMinutes} minutes to get ${bonusMinutes} minutes free`;
+                        }
+                        discountText = `Time bonus: ${bonusText} (₹${(parseFloat(appliedCoupon.calculated_discount) || 0).toFixed(2)} discount)`;
                     }
                     alert(`Coupon applied successfully! ${discountText}`);
                 } else {
@@ -1313,6 +1446,8 @@ require_once __DIR__ . '/../includes/header.php';
     function updateBillingAmounts() {
         if (!currentBillingData) return;
 
+        console.log('updateBillingAmounts called with appliedCoupon:', appliedCoupon);
+
         const gamingAmount = parseFloat(currentBillingData.gaming_amount || 0);
         const fanddAmount = parseFloat(currentBillingData.fandd_amount || 0);
         const subtotal = gamingAmount + fanddAmount;
@@ -1325,19 +1460,25 @@ require_once __DIR__ . '/../includes/header.php';
                 discountAmount = (gamingAmount * appliedCoupon.discount_value) / 100;
             } else if (appliedCoupon.discount_type === 'flat') {
                 discountAmount = Math.min(appliedCoupon.discount_value, gamingAmount);
+            } else if (appliedCoupon.discount_type === 'time_bonus') {
+                // Use the discount amount calculated by the API
+                discountAmount = parseFloat(appliedCoupon.calculated_discount) || 0;
             }
 
-            // Use the calculated discount from API if available
-            if (appliedCoupon.calculated_discount !== undefined) {
-                discountAmount = appliedCoupon.calculated_discount;
+            // Use the calculated discount from API if available (for non-time_bonus coupons)
+            if (appliedCoupon.calculated_discount !== undefined && appliedCoupon.discount_type !== 'time_bonus') {
+                discountAmount = parseFloat(appliedCoupon.calculated_discount) || 0;
             }
         }
+
+        // Ensure discountAmount is always a number
+        discountAmount = parseFloat(discountAmount) || 0;
 
         const grandTotal = (gamingAmount - discountAmount) + fanddAmount;
 
         document.getElementById('gaming-total-amount').textContent = gamingAmount.toFixed(2);
         document.getElementById('food-drinks-total-amount').textContent = fanddAmount.toFixed(2);
-        document.getElementById('discount-amount').textContent = discountAmount.toFixed(2);
+        document.getElementById('discount-amount').textContent = (discountAmount || 0).toFixed(2);
         document.getElementById('grand-total-amount').textContent = grandTotal.toFixed(2);
     }
 
@@ -1677,6 +1818,41 @@ require_once __DIR__ . '/../includes/header.php';
     });
 
     document.getElementById('confirm-add-fandd-btn').addEventListener('click', confirmAddFandD);
+
+    // Pause Session Modal Event Listeners
+    document.getElementById('pause-reason').addEventListener('change', function() {
+        const customGroup = document.getElementById('custom-reason-group');
+        if (this.value === 'Other') {
+            customGroup.style.display = 'block';
+            document.getElementById('custom-pause-reason').required = true;
+        } else {
+            customGroup.style.display = 'none';
+            document.getElementById('custom-pause-reason').required = false;
+        }
+    });
+
+    document.getElementById('confirm-pause-btn').addEventListener('click', function() {
+        const consoleId = document.getElementById('pause-console-id').value;
+        const reason = document.getElementById('pause-reason').value;
+        const customReason = document.getElementById('custom-pause-reason').value;
+
+        if (!reason) {
+            alert('Please select a pause reason');
+            return;
+        }
+
+        if (reason === 'Other' && !customReason.trim()) {
+            alert('Please enter a custom reason');
+            return;
+        }
+
+        const finalReason = reason === 'Other' ? customReason.trim() : reason;
+        pauseSession(consoleId, finalReason);
+    });
+
+    document.getElementById('cancel-pause').addEventListener('click', function() {
+        document.getElementById('pause-session-modal').classList.add('hidden');
+    });
 
     // Initial load
     loadConsoles();
@@ -2178,6 +2354,20 @@ require_once __DIR__ . '/../includes/header.php';
     .bottom-buttons .btn--lg:hover {
         transform: translateY(-1px);
         box-shadow: var(--shadow-sm);
+    }
+
+    .bottom-buttons .btn--lg:disabled {
+        background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%) !important;
+        color: #d1d5db !important;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+        opacity: 0.6;
+    }
+
+    .bottom-buttons .btn--lg:disabled::before {
+        content: '⛔';
+        font-size: 14px;
     }
 
     /* Enhanced F&D Modal Styles */
@@ -2723,14 +2913,60 @@ require_once __DIR__ . '/../includes/header.php';
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 8px 0;
+        padding: 12px 0;
         border-bottom: 1px solid var(--color-border);
         color: var(--color-text-secondary);
+    }
+
+    .segment-details {
+        flex: 1;
+    }
+
+    .segment-header {
+        font-weight: 600;
+        color: var(--color-text);
+        margin-bottom: 4px;
+    }
+
+    .segment-times {
+        color: var(--color-text-secondary);
+        font-size: 0.9em;
+    }
+
+    .segment-times small {
+        color: var(--color-text-secondary);
+    }
+
+    .segment-amount {
+        font-weight: 600;
+        color: var(--color-text);
+        font-size: 1.1em;
     }
 
     .segment-item:last-child,
     .food-drink-item:last-child {
         border-bottom: none;
+    }
+
+    .pause-list {
+        margin-top: 10px;
+    }
+
+    .pause-item {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 4px;
+        padding: 8px 12px;
+        margin-bottom: 8px;
+    }
+
+    .pause-item:last-child {
+        margin-bottom: 0;
+    }
+
+    .pause-item small {
+        color: var(--color-text-secondary);
+        font-size: 0.85em;
     }
 
     .pause-history {
