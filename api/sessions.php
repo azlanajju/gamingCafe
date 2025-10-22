@@ -1011,6 +1011,13 @@ class SessionManager
             }
 
             $console_id = $session['console_id'];
+
+            // Get console's branch_id
+            $stmt = $this->db->prepare("SELECT branch_id FROM consoles WHERE id = ?");
+            $stmt->bind_param("i", $console_id);
+            $stmt->execute();
+            $console = $stmt->get_result()->fetch_assoc();
+            $branch_id = $console ? $console['branch_id'] : 1; // Default to 1 if console not found
             $customer_name = $session['customer_name'];
             $customer_number = $session['customer_number'];
             // $player_count = $session['player_count']; // Get this from segment data if needed for transaction
@@ -1039,14 +1046,14 @@ class SessionManager
                 (session_id, console_id, customer_name, customer_number, player_count, rate_type, 
                  start_time, end_time, duration, total_duration_minutes, gaming_amount, fandd_amount, 
                  subtotal, tax_amount, total_amount, payment_method, payment_details, coupon_code, 
-                 discount_amount, final_amount, payment_status, created_by, payment_date) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, NOW())
+                 discount_amount, final_amount, payment_status, created_by, payment_date, branch_id) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, NOW(), ?)
             ");
 
             $payment_details_json = $payment_details ? json_encode($payment_details) : null;
 
             $stmt->bind_param(
-                "iississsiiddddsssddii",
+                "iississsiiddddsssddiii",
                 $session_id,
                 $console_id,
                 $customer_name,
@@ -1067,7 +1074,8 @@ class SessionManager
                 $coupon_code,
                 $discount_amount,
                 $final_amount,
-                $user_id
+                $user_id,
+                $branch_id
             );
 
             if (!$stmt->execute()) {

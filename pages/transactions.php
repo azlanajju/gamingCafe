@@ -30,6 +30,9 @@ require_once __DIR__ . '/../includes/header.php';
                 <select id="console-filter" class="filter-select">
                     <option value="">All Consoles</option>
                 </select>
+                <select id="branch-filter" class="filter-select">
+                    <option value="">All Branches</option>
+                </select>
                 <select id="payment-filter" class="filter-select">
                     <option value="">All Payments</option>
                     <option value="cash">Cash</option>
@@ -53,6 +56,7 @@ require_once __DIR__ . '/../includes/header.php';
                         <th>SL.No</th>
                         <th>Customer</th>
                         <th>Console</th>
+                        <th>Branch</th>
                         <th>Duration</th>
                         <th>Gaming Amount</th>
                         <th>Food Amount</th>
@@ -69,7 +73,7 @@ require_once __DIR__ . '/../includes/header.php';
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="4"><strong>TOTAL:</strong></td>
+                        <td colspan="5"><strong>TOTAL:</strong></td>
                         <td id="gaming-total">₹0.00</td>
                         <td id="food-total">₹0.00</td>
                         <td id="discount-total">₹0.00</td>
@@ -131,7 +135,7 @@ require_once __DIR__ . '/../includes/header.php';
         border-collapse: collapse;
         font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         font-size: 14px;
-        min-width: 1400px;
+        min-width: 1600px;
         background: var(--color-surface);
         border-radius: 8px;
         overflow: hidden;
@@ -193,58 +197,72 @@ require_once __DIR__ . '/../includes/header.php';
         min-width: 140px;
     }
 
-    /* Duration */
+    /* Branch */
     .data-table th:nth-child(4),
     .data-table td:nth-child(4) {
+        width: 120px;
+        min-width: 120px;
+    }
+
+    /* Duration */
+    .data-table th:nth-child(5),
+    .data-table td:nth-child(5) {
         width: 100px;
         min-width: 100px;
     }
 
     /* Gaming Amount */
-    .data-table th:nth-child(5),
-    .data-table td:nth-child(5) {
-        width: 120px;
-        min-width: 120px;
-    }
-
-    /* Food Amount */
     .data-table th:nth-child(6),
     .data-table td:nth-child(6) {
         width: 120px;
         min-width: 120px;
     }
 
-    /* Total Amount */
+    /* Food Amount */
     .data-table th:nth-child(7),
     .data-table td:nth-child(7) {
         width: 120px;
         min-width: 120px;
     }
 
-    /* Payment */
+    /* Discount */
     .data-table th:nth-child(8),
     .data-table td:nth-child(8) {
-        width: 100px;
-        min-width: 100px;
+        width: 120px;
+        min-width: 120px;
     }
 
-    /* Date */
+    /* Total Amount */
     .data-table th:nth-child(9),
     .data-table td:nth-child(9) {
         width: 120px;
         min-width: 120px;
     }
 
-    /* User */
+    /* Payment */
     .data-table th:nth-child(10),
     .data-table td:nth-child(10) {
+        width: 100px;
+        min-width: 100px;
+    }
+
+    /* Date */
+    .data-table th:nth-child(11),
+    .data-table td:nth-child(11) {
+        width: 120px;
+        min-width: 120px;
+    }
+
+    /* User */
+    .data-table th:nth-child(12),
+    .data-table td:nth-child(12) {
         width: 120px;
         min-width: 120px;
     }
 
     /* Actions */
-    .data-table th:nth-child(11),
-    .data-table td:nth-child(11) {
+    .data-table th:nth-child(13),
+    .data-table td:nth-child(13) {
         width: 100px;
         min-width: 100px;
     }
@@ -728,6 +746,7 @@ require_once __DIR__ . '/../includes/header.php';
     let currentPage = 1;
     let itemsPerPage = 10;
     let uniqueConsoles = new Set();
+    let uniqueBranches = new Set();
 
     // Initialize date inputs - leave empty to show all transactions
     function initializeDates() {
@@ -740,10 +759,12 @@ require_once __DIR__ . '/../includes/header.php';
     function loadTransactions() {
         const startDate = document.getElementById('start-date').value;
         const endDate = document.getElementById('end-date').value;
+        const branchId = document.getElementById('branch-filter').value;
 
         let url = `${SITE_URL}/api/transactions.php?action=list`;
         if (startDate) url += `&start_date=${startDate}`;
         if (endDate) url += `&end_date=${endDate}`;
+        if (branchId) url += `&branch_id=${branchId}`;
 
         fetch(url)
             .then(res => res.json())
@@ -751,6 +772,7 @@ require_once __DIR__ . '/../includes/header.php';
                 if (result.success) {
                     allTransactions = result.data;
                     populateConsoleFilter();
+                    populateBranchFilter();
                     applyFilters();
                 }
             })
@@ -776,10 +798,30 @@ require_once __DIR__ . '/../includes/header.php';
         });
     }
 
+    // Populate branch filter dropdown
+    function populateBranchFilter() {
+        uniqueBranches.clear();
+        allTransactions.forEach(txn => {
+            if (txn.branch_name) {
+                uniqueBranches.add(txn.branch_name);
+            }
+        });
+
+        const branchFilter = document.getElementById('branch-filter');
+        branchFilter.innerHTML = '<option value="">All Branches</option>';
+        Array.from(uniqueBranches).sort().forEach(branch => {
+            const option = document.createElement('option');
+            option.value = branch;
+            option.textContent = branch;
+            branchFilter.appendChild(option);
+        });
+    }
+
     // Apply all filters
     function applyFilters() {
         const searchTerm = document.getElementById('search-input').value.toLowerCase();
         const consoleFilter = document.getElementById('console-filter').value.toLowerCase();
+        const branchFilter = document.getElementById('branch-filter').value.toLowerCase();
         const paymentFilter = document.getElementById('payment-filter').value.toLowerCase();
 
         filteredTransactions = allTransactions.filter(txn => {
@@ -787,17 +829,22 @@ require_once __DIR__ . '/../includes/header.php';
             const matchesSearch = !searchTerm ||
                 (txn.customer_name && txn.customer_name.toLowerCase().includes(searchTerm)) ||
                 (txn.console_name && txn.console_name.toLowerCase().includes(searchTerm)) ||
+                (txn.branch_name && txn.branch_name.toLowerCase().includes(searchTerm)) ||
                 (txn.user_name && txn.user_name.toLowerCase().includes(searchTerm));
 
             // Console filter
             const matchesConsole = !consoleFilter ||
                 (txn.console_name && txn.console_name.toLowerCase() === consoleFilter);
 
+            // Branch filter
+            const matchesBranch = !branchFilter ||
+                (txn.branch_name && txn.branch_name.toLowerCase() === branchFilter);
+
             // Payment filter
             const matchesPayment = !paymentFilter ||
                 (txn.payment_method && txn.payment_method.toLowerCase() === paymentFilter);
 
-            return matchesSearch && matchesConsole && matchesPayment;
+            return matchesSearch && matchesConsole && matchesBranch && matchesPayment;
         });
 
         currentPage = 1;
@@ -834,7 +881,7 @@ require_once __DIR__ . '/../includes/header.php';
         let grandTotal = 0;
 
         if (filteredTransactions.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="12" style="text-align: center; padding: 20px; color: #999;">No transactions found</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="13" style="text-align: center; padding: 20px; color: #999;">No transactions found</td></tr>';
             const gamingTotalEl = document.getElementById('gaming-total');
             const foodTotalEl = document.getElementById('food-total');
             const discountTotalEl = document.getElementById('discount-total');
@@ -867,6 +914,7 @@ require_once __DIR__ . '/../includes/header.php';
             <td>${globalIndex}</td>
             <td>${txn.customer_name}</td>
             <td>${txn.console_name || '-'}</td>
+            <td>${txn.branch_name || 'Unknown Branch'}</td>
             <td>${formatDuration(txn.total_duration_minutes || txn.duration || 0)}</td>
             <td>₹${parseFloat(txn.gaming_amount || 0).toFixed(2)}</td>
             <td>₹${parseFloat(txn.fandd_amount || txn.food_amount || 0).toFixed(2)}</td>
@@ -1367,6 +1415,7 @@ Created By: ${transaction.user_name || '-'}
     });
 
     document.getElementById('console-filter').addEventListener('change', applyFilters);
+    document.getElementById('branch-filter').addEventListener('change', applyFilters);
     document.getElementById('payment-filter').addEventListener('change', applyFilters);
 
     document.getElementById('apply-filters').addEventListener('click', loadTransactions);
@@ -1375,6 +1424,7 @@ Created By: ${transaction.user_name || '-'}
         initializeDates();
         document.getElementById('search-input').value = '';
         document.getElementById('console-filter').value = '';
+        document.getElementById('branch-filter').value = '';
         document.getElementById('payment-filter').value = '';
         document.getElementById('clear-search').style.display = 'none';
         loadTransactions();

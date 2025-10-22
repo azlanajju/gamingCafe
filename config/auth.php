@@ -16,6 +16,15 @@ class Auth
         return $_SESSION['user_id'] ?? null;
     }
 
+    // Get current user's branch ID
+    public static function userBranchId()
+    {
+        if (!self::check()) {
+            return null;
+        }
+        return $_SESSION['user_branch_id'] ?? null;
+    }
+
     // Get current user data
     public static function user()
     {
@@ -42,7 +51,7 @@ class Auth
     {
         $db = getDB();
 
-        $stmt = $db->prepare("SELECT id, full_name, username, email, password, role, status FROM users WHERE (username = ? OR email = ?) AND status = 'Active' LIMIT 1");
+        $stmt = $db->prepare("SELECT id, full_name, username, email, password, role, branch_id, status FROM users WHERE (username = ? OR email = ?) AND status = 'Active' LIMIT 1");
         $stmt->bind_param("ss", $username, $username);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -63,6 +72,7 @@ class Auth
         $_SESSION['user_email'] = $user['email'];
         $_SESSION['user_name'] = $user['full_name'];
         $_SESSION['user_role'] = $user['role'];
+        $_SESSION['user_branch_id'] = $user['branch_id'];
 
         // Log activity
         self::logActivity($user['id'], 'login', 'User logged in');
@@ -79,6 +89,17 @@ class Auth
 
         session_unset();
         session_destroy();
+    }
+
+    // Check if user should be restricted to their branch (Manager or Staff role)
+    public static function isManagerRestricted()
+    {
+        if (!self::check()) {
+            return false;
+        }
+
+        $userRole = $_SESSION['user_role'] ?? '';
+        return in_array($userRole, ['Manager', 'Staff']);
     }
 
     // Check if user has specific role
@@ -132,4 +153,3 @@ class Auth
         $stmt->execute();
     }
 }
-

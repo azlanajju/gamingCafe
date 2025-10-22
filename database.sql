@@ -45,13 +45,15 @@ CREATE TABLE `branches` (
   `address` text NOT NULL,
   `contact` varchar(20) NOT NULL,
   `manager_name` varchar(255) NOT NULL,
+  `manager_id` int(11) DEFAULT NULL,
   `timing` varchar(100) NOT NULL,
   `console_count` int(11) DEFAULT 0,
   `established_year` int(4) DEFAULT NULL,
   `status` enum('Active','Inactive') NOT NULL DEFAULT 'Active',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  CONSTRAINT `fk_manager` FOREIGN KEY (`manager_id`) REFERENCES `users`(`id`) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Insert default branch
@@ -113,6 +115,21 @@ CREATE TABLE `game_console_assignments` (
 -- --------------------------------------------------------
 -- Table structure for table `inventory`
 -- --------------------------------------------------------
+CREATE TABLE `food_and_drinks` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL,
+  `price` decimal(10,2) NOT NULL,
+  `stock` int(11) NOT NULL DEFAULT 0,
+  `category` enum('beverages','snacks','meals','desserts','other') NOT NULL DEFAULT 'other',
+  `description` text DEFAULT NULL,
+  `is_available` tinyint(1) NOT NULL DEFAULT 1,
+  `image_url` varchar(500) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `branch_id` int(11) NOT NULL DEFAULT 1,
+  PRIMARY KEY (`id`),
+  CONSTRAINT `fk_branch` FOREIGN KEY (`branch_id`) REFERENCES `branches` (`id`) ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE `inventory` (
   `id` int(11) NOT NULL AUTO_INCREMENT,

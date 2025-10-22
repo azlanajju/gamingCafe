@@ -56,6 +56,16 @@ require_once __DIR__ . '/../includes/header.php';
                 <label class="form-label">Primary User *</label>
                 <input type="text" class="form-control" id="console-user" required>
             </div>
+            <?php if (Auth::hasRole('Admin')): ?>
+                <div class="form-group">
+                    <label class="form-label">Branch *</label>
+                    <select class="form-control" id="console-branch" required>
+                        <option value="">Select Branch</option>
+                    </select>
+                </div>
+            <?php else: ?>
+                <input type="hidden" id="console-branch" value="<?php echo Auth::userBranchId() ?? 1; ?>">
+            <?php endif; ?>
             <div class="form-group">
                 <label class="form-label">Location *</label>
                 <select class="form-control" id="console-location" required>
@@ -310,13 +320,18 @@ require_once __DIR__ . '/../includes/header.php';
 
 <script>
     // Load consoles
-    function loadConsoles() {
-        console.log('Loading consoles from:', `${SITE_URL}/api/consoles.php?action=list`);
+    function loadConsoles(branch = '') {
+        let url = `${SITE_URL}/api/consoles.php?action=list`;
+        if (branch) {
+            url += `&branch=${branch}`;
+        }
+
+        console.log('Loading consoles from:', url);
 
         const grid = document.getElementById('console-grid');
         grid.innerHTML = '<p style="text-align: center; padding: 20px;">Loading consoles...</p>';
 
-        fetch(`${SITE_URL}/api/consoles.php?action=list`)
+        fetch(url)
             .then(res => {
                 console.log('Response status:', res.status);
                 if (!res.ok) {
@@ -518,6 +533,10 @@ require_once __DIR__ . '/../includes/header.php';
                             <div class="console-info-section">
                                 <div class="console-specs-card">
                                     <div class="spec-item">
+                                        <span class="spec-icon">🏢</span>
+                                        <span class="spec-text">${console.branch_name || 'Unknown Branch'} - ${console.branch_location || 'Unknown Location'}</span>
+                                    </div>
+                                    <div class="spec-item">
                                         <span class="spec-icon">⚙️</span>
                                         <span class="spec-text">${console.specifications || `${console.type}, ${console.purchase_year}`}</span>
                                     </div>
@@ -558,6 +577,27 @@ require_once __DIR__ . '/../includes/header.php';
             });
     }
 
+    // Load branches for console form
+    function loadBranches() {
+        fetch(`${SITE_URL}/api/branches.php?action=list`)
+            .then(res => res.json())
+            .then(result => {
+                if (result.success) {
+                    const select = document.getElementById('console-branch');
+                    if (select) {
+                        select.innerHTML = '<option value="">Select Branch</option>';
+
+                        result.data.forEach(branch => {
+                            const option = document.createElement('option');
+                            option.value = branch.id;
+                            option.textContent = `${branch.name} - ${branch.location}`;
+                            select.appendChild(option);
+                        });
+                    }
+                }
+            });
+    }
+
     // Add console button
     document.getElementById('add-console-btn').addEventListener('click', () => {
         document.getElementById('console-modal-title').textContent = 'Add New Console';
@@ -586,7 +626,7 @@ require_once __DIR__ . '/../includes/header.php';
             location: document.getElementById('console-location').value,
             has_plus_account: document.getElementById('console-plus').checked ? 1 : 0,
             under_maintenance: document.getElementById('console-maintenance').checked ? 1 : 0,
-            branch_id: 1
+            branch_id: document.getElementById('console-branch').value
         };
 
         const action = id ? 'update' : 'create';
@@ -604,7 +644,11 @@ require_once __DIR__ . '/../includes/header.php';
                 if (result.success) {
                     alert(result.message);
                     document.getElementById('add-console-modal').classList.add('hidden');
-                    loadConsoles();
+                    <?php if (Auth::isManagerRestricted()): ?>
+                        loadConsoles('<?php echo Auth::userBranchId() ?? 1; ?>');
+                    <?php else: ?>
+                        loadConsoles();
+                    <?php endif; ?>
                 } else {
                     alert('Error: ' + result.message);
                 }
@@ -627,6 +671,10 @@ require_once __DIR__ . '/../includes/header.php';
                     document.getElementById('console-email').value = console.email;
                     document.getElementById('console-user').value = console.primary_user;
                     document.getElementById('console-location').value = console.location;
+                    const branchElement = document.getElementById('console-branch');
+                    if (branchElement) {
+                        branchElement.value = console.branch_id || '';
+                    }
                     document.getElementById('console-plus').checked = console.has_plus_account == 1;
                     document.getElementById('console-maintenance').checked = (console.under_maintenance == 1 || console.under_maintenance === true);
                     document.getElementById('add-console-modal').classList.remove('hidden');
@@ -644,7 +692,11 @@ require_once __DIR__ . '/../includes/header.php';
                 .then(result => {
                     if (result.success) {
                         alert(result.message);
-                        loadConsoles();
+                        <?php if (Auth::isManagerRestricted()): ?>
+                            loadConsoles('<?php echo Auth::userBranchId() ?? 1; ?>');
+                        <?php else: ?>
+                            loadConsoles();
+                        <?php endif; ?>
                     } else {
                         alert('Error: ' + result.message);
                     }
@@ -700,7 +752,11 @@ require_once __DIR__ . '/../includes/header.php';
                 if (result.success) {
                     alert('Session started successfully');
                     document.getElementById('start-session-modal').classList.add('hidden');
-                    loadConsoles();
+                    <?php if (Auth::isManagerRestricted()): ?>
+                        loadConsoles('<?php echo Auth::userBranchId() ?? 1; ?>');
+                    <?php else: ?>
+                        loadConsoles();
+                    <?php endif; ?>
                     startSessionTimer(consoleId, result.data.session_id);
                 } else {
                     alert('Error: ' + result.message);
@@ -763,7 +819,11 @@ require_once __DIR__ . '/../includes/header.php';
                         clearInterval(sessionTimers[consoleId]);
                         delete sessionTimers[consoleId];
                     }
-                    loadConsoles();
+                    <?php if (Auth::isManagerRestricted()): ?>
+                        loadConsoles('<?php echo Auth::userBranchId() ?? 1; ?>');
+                    <?php else: ?>
+                        loadConsoles();
+                    <?php endif; ?>
                     document.getElementById('pause-session-modal').classList.add('hidden');
                 } else {
                     alert('Error: ' + result.message);
@@ -787,7 +847,11 @@ require_once __DIR__ . '/../includes/header.php';
                 if (result.success) {
                     alert('Session resumed');
                     // Start timer for resumed session
-                    loadConsoles();
+                    <?php if (Auth::isManagerRestricted()): ?>
+                        loadConsoles('<?php echo Auth::userBranchId() ?? 1; ?>');
+                    <?php else: ?>
+                        loadConsoles();
+                    <?php endif; ?>
                 } else {
                     alert('Error: ' + result.message);
                 }
@@ -910,7 +974,11 @@ require_once __DIR__ . '/../includes/header.php';
                     }
                     startSessionTimer(targetConsoleId, result.data.session_id);
 
-                    loadConsoles();
+                    <?php if (Auth::isManagerRestricted()): ?>
+                        loadConsoles('<?php echo Auth::userBranchId() ?? 1; ?>');
+                    <?php else: ?>
+                        loadConsoles();
+                    <?php endif; ?>
                 } else {
                     alert('Error: ' + result.message);
                 }
@@ -945,7 +1013,11 @@ require_once __DIR__ . '/../includes/header.php';
                 if (result.success) {
                     alert('Player count updated successfully and new segment started');
                     document.getElementById('change-players-modal').classList.add('hidden');
-                    loadConsoles();
+                    <?php if (Auth::isManagerRestricted()): ?>
+                        loadConsoles('<?php echo Auth::userBranchId() ?? 1; ?>');
+                    <?php else: ?>
+                        loadConsoles();
+                    <?php endif; ?>
                 } else {
                     alert('Error: ' + result.message);
                 }
@@ -1132,7 +1204,11 @@ require_once __DIR__ . '/../includes/header.php';
                 if (successCount === selectedItems.length) {
                     alert(`Successfully added ${selectedItems.length} item(s) to the session`);
                     document.getElementById('add-fandd-modal').classList.add('hidden');
-                    loadConsoles();
+                    <?php if (Auth::isManagerRestricted()): ?>
+                        loadConsoles('<?php echo Auth::userBranchId() ?? 1; ?>');
+                    <?php else: ?>
+                        loadConsoles();
+                    <?php endif; ?>
                 } else {
                     alert('Some items could not be added. Please try again.');
                 }
@@ -1162,7 +1238,11 @@ require_once __DIR__ . '/../includes/header.php';
                 .then(result => {
                     if (result.success) {
                         alert('Item removed successfully');
-                        loadConsoles();
+                        <?php if (Auth::isManagerRestricted()): ?>
+                            loadConsoles('<?php echo Auth::userBranchId() ?? 1; ?>');
+                        <?php else: ?>
+                            loadConsoles();
+                        <?php endif; ?>
                     } else {
                         alert('Error: ' + result.message);
                     }
@@ -1562,7 +1642,11 @@ require_once __DIR__ . '/../includes/header.php';
                                     clearInterval(sessionTimers[currentBillingData.console_id]);
                                     delete sessionTimers[currentBillingData.console_id];
                                 }
-                                loadConsoles();
+                                <?php if (Auth::isManagerRestricted()): ?>
+                                    loadConsoles('<?php echo Auth::userBranchId() ?? 1; ?>');
+                                <?php else: ?>
+                                    loadConsoles();
+                                <?php endif; ?>
                             } else {
                                 alert('Error processing payment: ' + paymentResult.message);
                                 // Potentially revert session end if payment fails? (Complex, might be handled by manual admin intervention)
@@ -1855,7 +1939,14 @@ require_once __DIR__ . '/../includes/header.php';
     });
 
     // Initial load
-    loadConsoles();
+    loadBranches();
+
+    // For Managers and Staff, automatically filter by their branch
+    <?php if (Auth::isManagerRestricted()): ?>
+        loadConsoles('<?php echo Auth::userBranchId() ?? 1; ?>');
+    <?php else: ?>
+        loadConsoles();
+    <?php endif; ?>
 </script>
 
 <style>

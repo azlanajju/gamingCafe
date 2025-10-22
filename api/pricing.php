@@ -15,14 +15,30 @@ try {
             if ($action === 'list') {
                 // Get all pricing data
                 $rate_type = $_GET['rate_type'] ?? '';
-                $where_clause = '';
+
+                // Check if user is a manager/staff and should be restricted to their branch
+                $userBranchId = Auth::userBranchId();
+                $isManagerRestricted = Auth::isManagerRestricted();
+
+                $where_conditions = [];
                 $params = [];
                 $param_types = '';
 
                 if ($rate_type) {
-                    $where_clause = "WHERE rate_type = ?";
+                    $where_conditions[] = "rate_type = ?";
                     $params[] = $rate_type;
                     $param_types .= 's';
+                }
+
+                if ($isManagerRestricted && $userBranchId) {
+                    $where_conditions[] = "branch_id = ?";
+                    $params[] = $userBranchId;
+                    $param_types .= 'i';
+                }
+
+                $where_clause = '';
+                if (!empty($where_conditions)) {
+                    $where_clause = "WHERE " . implode(' AND ', $where_conditions);
                 }
 
                 $stmt = $db->prepare("
@@ -87,6 +103,15 @@ try {
                 $duration_45 = floatval($input['duration_45'] ?? 0);
                 $duration_60 = floatval($input['duration_60'] ?? 0);
                 $branch_id = intval($input['branch_id'] ?? 1);
+
+                // Check if user is a manager/staff and should be restricted to their branch
+                $userBranchId = Auth::userBranchId();
+                $isManagerRestricted = Auth::isManagerRestricted();
+
+                if ($isManagerRestricted && $userBranchId) {
+                    // Manager/Staff can only create pricing for their branch
+                    $branch_id = $userBranchId;
+                }
 
                 if (!$rate_type || !$player_count) {
                     echo json_encode(['success' => false, 'message' => 'Rate type and player count are required']);

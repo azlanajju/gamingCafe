@@ -58,6 +58,16 @@ if (!Auth::hasRole('Admin')) {
                 <label class="form-label">Phone</label>
                 <input type="tel" class="form-control" id="user-phone" required>
             </div>
+            <?php if (Auth::hasRole('Admin')): ?>
+                <div class="form-group">
+                    <label class="form-label">Branch *</label>
+                    <select class="form-control" id="user-branch" required>
+                        <option value="">Select Branch</option>
+                    </select>
+                </div>
+            <?php else: ?>
+                <input type="hidden" id="user-branch" value="<?php echo Auth::userBranchId() ?? 1; ?>">
+            <?php endif; ?>
             <div class="form-group">
                 <label class="form-label">Role</label>
                 <select class="form-control" id="user-role" required>
@@ -86,6 +96,27 @@ if (!Auth::hasRole('Admin')) {
 </div>
 
 <script>
+    // Load branches
+    function loadBranches() {
+        fetch(`${SITE_URL}/api/users.php?action=branches`)
+            .then(res => res.json())
+            .then(result => {
+                if (result.success) {
+                    const select = document.getElementById('user-branch');
+                    if (select) {
+                        select.innerHTML = '<option value="">Select Branch</option>';
+
+                        result.data.forEach(branch => {
+                            const option = document.createElement('option');
+                            option.value = branch.id;
+                            option.textContent = `${branch.name} - ${branch.location}`;
+                            select.appendChild(option);
+                        });
+                    }
+                }
+            });
+    }
+
     // Load users
     function loadUsers() {
         fetch(`${SITE_URL}/api/users.php?action=list`)
@@ -142,7 +173,7 @@ if (!Auth::hasRole('Admin')) {
             phone: document.getElementById('user-phone').value,
             role: document.getElementById('user-role').value,
             status: document.getElementById('user-status').value,
-            branch_id: 1
+            branch_id: document.getElementById('user-branch').value,
         };
 
         const password = document.getElementById('user-password').value;
@@ -185,6 +216,10 @@ if (!Auth::hasRole('Admin')) {
                         document.getElementById('user-email').value = user.email;
                         document.getElementById('user-phone').value = user.phone;
                         document.getElementById('user-role').value = user.role;
+                        const branchElement = document.getElementById('user-branch');
+                        if (branchElement) {
+                            branchElement.value = user.branch_id || '';
+                        }
                         document.getElementById('user-status').value = user.status;
                         document.getElementById('user-password').value = '';
                         document.getElementById('pwd-note').style.display = 'inline';
@@ -214,12 +249,8 @@ if (!Auth::hasRole('Admin')) {
     }
 
     // Initial load
+    loadBranches();
     loadUsers();
 </script>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
-
-
-
-
-

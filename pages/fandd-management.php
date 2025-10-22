@@ -8,6 +8,11 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="section-header">
         <h2 class="section-title">Food & Drinks Management</h2>
         <div class="header-actions">
+            <?php if (Auth::hasRole('Admin')): ?>
+                <select id="branch-filter" class="form-control" style="width: auto; display: inline-block;">
+                    <option value="">All Branches</option>
+                </select>
+            <?php endif; ?>
             <select id="category-filter" class="form-control" style="width: auto; display: inline-block;">
                 <option value="">All Categories</option>
                 <option value="beverages">Beverages</option>
@@ -33,6 +38,16 @@ require_once __DIR__ . '/../includes/header.php';
         <h3 id="item-modal-title">Add New Item</h3>
         <form id="item-form">
             <input type="hidden" id="item-id">
+            <?php if (Auth::hasRole('Admin')): ?>
+                <div class="form-group">
+                    <label class="form-label">Branch *</label>
+                    <select class="form-control" id="item-branch" required>
+                        <option value="">Select Branch</option>
+                    </select>
+                </div>
+            <?php else: ?>
+                <input type="hidden" id="item-branch" value="<?php echo Auth::userBranchId() ?? 1; ?>">
+            <?php endif; ?>
             <div class="form-group">
                 <label class="form-label">Item Name *</label>
                 <input type="text" class="form-control" id="item-name" required>
@@ -42,7 +57,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <input type="number" class="form-control" id="item-price" min="0" step="0.01" required>
             </div>
             <div class="form-group">
-                <label class="form-label">Stock *</label>
+                <label class="form-label">Stock Quantity *</label>
                 <input type="number" class="form-control" id="item-stock" min="0" required>
             </div>
             <div class="form-group">
@@ -61,9 +76,8 @@ require_once __DIR__ . '/../includes/header.php';
                 <textarea class="form-control" id="item-description" rows="3"></textarea>
             </div>
             <div class="form-group">
-                <label class="checkbox-label">
-                    <input type="checkbox" id="item-available" checked>
-                    Available for purchase
+                <label class="form-label">
+                    <input type="checkbox" id="item-is-available" checked> Available
                 </label>
             </div>
             <div class="modal-actions">
@@ -75,11 +89,64 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 
 <script>
-    // Load items
-    function loadItems(category = '') {
-        const url = category ?
-            `${SITE_URL}/api/fandd.php?action=list&category=${category}` :
-            `${SITE_URL}/api/fandd.php?action=list`;
+    // Load branches
+    function loadBranches() {
+        fetch(`${SITE_URL}/api/fandd.php?action=branches`)
+            .then(res => res.json())
+            .then(result => {
+                console.log('Branches result:', result);
+                if (result.success && result.data.length > 0) {
+                    const itemSelect = document.getElementById('item-branch');
+                    const filterSelect = document.getElementById('branch-filter');
+
+                    if (itemSelect) {
+                        itemSelect.innerHTML = '<option value="">Select Branch</option>';
+                    }
+                    if (filterSelect) {
+                        filterSelect.innerHTML = '<option value="">All Branches</option>';
+                    }
+
+                    result.data.forEach(branch => {
+                        if (itemSelect) {
+                            const option1 = document.createElement('option');
+                            option1.value = branch.id;
+                            option1.textContent = `${branch.name} - ${branch.location}`;
+                            itemSelect.appendChild(option1);
+                        }
+
+                        if (filterSelect) {
+                            const option2 = document.createElement('option');
+                            option2.value = branch.id;
+                            option2.textContent = `${branch.name} - ${branch.location}`;
+                            filterSelect.appendChild(option2);
+                        }
+                    });
+                } else {
+                    console.warn('No branches found or API error:', result);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading branches:', error);
+            });
+    }
+
+    // Load items with branch and category filtering
+    function loadItems(category = '', branch = '') {
+        let url = `${SITE_URL}/api/fandd.php?action=list`;
+        const params = [];
+
+        if (category) params.push(`category=${category}`);
+
+        <?php if (Auth::isManagerRestricted()): ?>
+            // For Managers and Staff, always filter by their branch
+            params.push(`branch=<?php echo Auth::userBranchId() ?? 1; ?>`);
+        <?php else: ?>
+            if (branch) params.push(`branch=${branch}`);
+        <?php endif; ?>
+
+        if (params.length > 0) {
+            url += '&' + params.join('&');
+        }
 
         fetch(url)
             .then(res => res.json())
@@ -109,6 +176,7 @@ require_once __DIR__ . '/../includes/header.php';
                                 <p class="item-price">₹${parseFloat(item.price).toFixed(2)}</p>
                                 <p class="item-stock">Stock: ${item.stock}</p>
                                 <p class="item-category">${item.category.charAt(0).toUpperCase() + item.category.slice(1)}</p>
+                                <p class="item-branch">Branch: ${item.branch_name || 'Unknown'} - ${item.branch_location || 'Unknown'}</p>
                                 ${item.description ? `<p class="item-description">${item.description}</p>` : ''}
                             </div>
                             ${USER_ROLE === 'Admin' || USER_ROLE === 'Manager' ? `
@@ -136,7 +204,6 @@ require_once __DIR__ . '/../includes/header.php';
     function addItem() {
         document.getElementById('item-modal-title').textContent = 'Add New Item';
         document.getElementById('item-form').reset();
-        document.getElementById('item-available').checked = true;
         document.getElementById('item-modal').classList.remove('hidden');
     }
 
@@ -154,7 +221,11 @@ require_once __DIR__ . '/../includes/header.php';
                     document.getElementById('item-stock').value = item.stock;
                     document.getElementById('item-category').value = item.category;
                     document.getElementById('item-description').value = item.description || '';
-                    document.getElementById('item-available').checked = item.is_available == 1;
+                    document.getElementById('item-is-available').checked = item.is_available == 1;
+                    const branchElement = document.getElementById('item-branch');
+                    if (branchElement) {
+                        branchElement.value = item.branch_id || '';
+                    }
                     document.getElementById('item-modal').classList.remove('hidden');
                 }
             });
@@ -195,13 +266,14 @@ require_once __DIR__ . '/../includes/header.php';
             stock: parseInt(document.getElementById('item-stock').value),
             category: document.getElementById('item-category').value,
             description: document.getElementById('item-description').value.trim(),
-            is_available: document.getElementById('item-available').checked ? 1 : 0
+            is_available: document.getElementById('item-is-available').checked ? 1 : 0,
+            branch_id: document.getElementById('item-branch').value
         };
 
         const url = isEdit ?
             `${SITE_URL}/api/fandd.php?action=update&id=${itemId}` :
             `${SITE_URL}/api/fandd.php?action=create`;
-        const method = isEdit ? 'POST' : 'POST';
+        const method = 'POST';
 
         fetch(url, {
                 method: method,
@@ -226,11 +298,35 @@ require_once __DIR__ . '/../includes/header.php';
     });
 
     document.getElementById('category-filter').addEventListener('change', (e) => {
-        loadItems(e.target.value);
+        const category = e.target.value;
+        const branchElement = document.getElementById('branch-filter');
+        <?php if (Auth::isManagerRestricted()): ?>
+            const userBranch = '<?php echo Auth::userBranchId() ?? 1; ?>';
+            loadItems(category, userBranch);
+        <?php else: ?>
+            const selectedBranch = branchElement ? branchElement.value : '';
+            loadItems(category, selectedBranch);
+        <?php endif; ?>
     });
 
+    const branchFilter = document.getElementById('branch-filter');
+    if (branchFilter) {
+        branchFilter.addEventListener('change', (e) => {
+            const branch = e.target.value;
+            const category = document.getElementById('category-filter').value;
+            loadItems(category, branch);
+        });
+    }
+
     // Initial load
-    loadItems();
+    loadBranches();
+
+    // For Managers and Staff, automatically filter by their branch
+    <?php if (Auth::isManagerRestricted()): ?>
+        loadItems('', '<?php echo Auth::userBranchId() ?? 1; ?>');
+    <?php else: ?>
+        loadItems();
+    <?php endif; ?>
 </script>
 
 <style>
@@ -252,7 +348,6 @@ require_once __DIR__ . '/../includes/header.php';
         box-shadow: var(--shadow-sm);
         backdrop-filter: blur(10px);
     }
-
 
     .item-card::after {
         content: '🍕';
@@ -281,12 +376,15 @@ require_once __DIR__ . '/../includes/header.php';
         filter: grayscale(0.3);
     }
 
-    .item-card.unavailable::before {
-        background: var(--color-error);
-    }
-
     .item-card.unavailable::after {
         content: '❌';
+    }
+
+    .item-image {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+        border-bottom: 1px solid var(--color-border);
     }
 
     .item-header {
@@ -412,13 +510,19 @@ require_once __DIR__ . '/../includes/header.php';
     .item-description {
         color: var(--color-text-secondary);
         font-size: 14px;
-        margin: 0;
+        margin: 12px 0 0 0;
         line-height: 1.5;
         background: var(--color-bg-1);
         padding: 12px;
         border-radius: 8px;
         border: 1px solid var(--color-border);
         font-style: italic;
+    }
+
+    .item-branch {
+        color: var(--color-text-secondary);
+        font-size: 13px;
+        margin: 12px 0 0 0;
     }
 
     .item-actions {
@@ -478,29 +582,13 @@ require_once __DIR__ . '/../includes/header.php';
         align-items: center;
     }
 
-    .checkbox-label {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        cursor: pointer;
-    }
-
-    .checkbox-label input[type="checkbox"] {
-        margin: 0;
-    }
-</style>
-
-<?php require_once __DIR__ . '/../includes/footer.php'; ?>   
-
-
-<style>
-/* Enh
-anced Animations and Effects */
+    /* Enhanced Animations and Effects */
     @keyframes slideInUp {
         from {
             opacity: 0;
             transform: translateY(30px) scale(0.95);
         }
+
         to {
             opacity: 1;
             transform: translateY(0) scale(1);
@@ -508,9 +596,12 @@ anced Animations and Effects */
     }
 
     @keyframes pulse {
-        0%, 100% {
+
+        0%,
+        100% {
             transform: scale(1);
         }
+
         50% {
             transform: scale(1.05);
         }
@@ -520,6 +611,7 @@ anced Animations and Effects */
         0% {
             background-position: -200px 0;
         }
+
         100% {
             background-position: calc(200px + 100%) 0;
         }
@@ -537,26 +629,18 @@ anced Animations and Effects */
         animation-delay: 0.2s;
     }
 
-    /* Loading shimmer effect */
     .item-card.loading {
         background: linear-gradient(90deg, var(--color-surface) 25%, var(--color-bg-1) 50%, var(--color-surface) 75%);
         background-size: 200px 100%;
         animation: shimmer 1.5s infinite;
     }
 
-    /* Hover glow effect */
     .item-card:hover {
         box-shadow: var(--shadow-lg), 0 0 20px rgba(var(--color-primary-rgb, 59, 130, 246), 0.15);
     }
 
-    /* Low stock warning */
     .item-card.low-stock {
         border-color: var(--color-warning);
-        animation: pulse 2s infinite;
-    }
-
-    .item-card.low-stock::before {
-        background: var(--color-warning);
     }
 
     .item-card.low-stock .item-stock {
@@ -640,4 +724,6 @@ anced Animations and Effects */
             justify-content: center;
         }
     }
-    </style>
+</style>
+
+<?php require_once __DIR__ . '/../includes/footer.php'; ?>

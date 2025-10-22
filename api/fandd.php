@@ -13,23 +13,43 @@ try {
     switch ($method) {
         case 'GET':
             if ($action === 'list') {
-                // Get all food and drinks
+                // Get all food and drinks with optional category and branch filters
                 $category_filter = $_GET['category'] ?? '';
-                $where_clause = '';
+                $branch_filter = $_GET['branch'] ?? '';
+
+                // Check if user is a manager and should be restricted to their branch
+                $userBranchId = Auth::userBranchId();
+                $isManagerRestricted = Auth::isManagerRestricted();
+
+                $query = "
+                    SELECT f.*, b.name as branch_name, b.location as branch_location
+                    FROM food_and_drinks f
+                    LEFT JOIN branches b ON f.branch_id = b.id
+                    WHERE 1=1
+                ";
                 $params = [];
                 $param_types = '';
 
                 if ($category_filter) {
-                    $where_clause = "WHERE category = ?";
+                    $query .= " AND f.category = ?";
                     $params[] = $category_filter;
                     $param_types .= 's';
                 }
 
-                $stmt = $db->prepare("
-                    SELECT * FROM food_and_drinks 
-                    {$where_clause}
-                    ORDER BY category, name ASC
-                ");
+                if ($branch_filter) {
+                    $query .= " AND f.branch_id = ?";
+                    $params[] = intval($branch_filter);
+                    $param_types .= 'i';
+                } elseif ($isManagerRestricted && $userBranchId) {
+                    // Manager can only see items from their branch
+                    $query .= " AND f.branch_id = ?";
+                    $params[] = $userBranchId;
+                    $param_types .= 'i';
+                }
+
+                $query .= " ORDER BY f.category, f.name ASC";
+
+                $stmt = $db->prepare($query);
 
                 if (!empty($params)) {
                     $stmt->bind_param($param_types, ...$params);
@@ -47,7 +67,7 @@ try {
             } elseif ($action === 'get' && isset($_GET['id'])) {
                 // Get single item
                 $id = intval($_GET['id']);
-                $stmt = $db->prepare("SELECT * FROM food_and_drinks WHERE id = ?");
+                $stmt = $db->prepare("SELECT f.*, b.name as branch_name, b.location as branch_location FROM food_and_drinks f LEFT JOIN branches b ON f.branch_id = b.id WHERE f.id = ?");
                 $stmt->bind_param("i", $id);
                 $stmt->execute();
                 $result = $stmt->get_result();
@@ -58,6 +78,16 @@ try {
                 } else {
                     echo json_encode(['success' => false, 'message' => 'Item not found']);
                 }
+            } elseif ($action === 'branches') {
+                // Get list of branches for selection
+                $stmt = $db->prepare("SELECT id, name, location FROM branches WHERE status = 'Active' ORDER BY name");
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $branches = [];
+                while ($row = $result->fetch_assoc()) {
+                    $branches[] = $row;
+                }
+                echo json_encode(['success' => true, 'data' => $branches]);
             } else {
                 echo json_encode(['success' => false, 'message' => 'Invalid action']);
             }
@@ -68,12 +98,25 @@ try {
                 // Create new item
                 $input = json_decode(file_get_contents('php://input'), true);
 
+                // Debug: Log the input data
+                error_log('F&D API Create - Input data: ' . json_encode($input));
+
                 $name = $input['name'] ?? '';
                 $price = floatval($input['price'] ?? 0);
                 $stock = intval($input['stock'] ?? 0);
                 $category = $input['category'] ?? 'other';
                 $description = $input['description'] ?? '';
                 $is_available = intval($input['is_available'] ?? 1);
+                $branch_id = intval($input['branch_id'] ?? 1);
+
+                // Check if user is a manager/staff and should be restricted to their branch
+                $userBranchId = Auth::userBranchId();
+                $isManagerRestricted = Auth::isManagerRestricted();
+
+                if ($isManagerRestricted && $userBranchId) {
+                    // Manager/Staff can only create items for their branch
+                    $branch_id = $userBranchId;
+                }
 
                 if (!$name || $price <= 0) {
                     echo json_encode(['success' => false, 'message' => 'Name and price are required']);
@@ -81,16 +124,27 @@ try {
                 }
 
                 $stmt = $db->prepare("
-                    INSERT INTO food_and_drinks (name, price, stock, category, description, is_available) 
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    INSERT INTO food_and_drinks (name, price, stock, category, description, is_available, branch_id) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
                 ");
-                $stmt->bind_param("sdisi", $name, $price, $stock, $category, $description, $is_available);
+
+                if (!$stmt) {
+                    echo json_encode(['success' => false, 'message' => 'Database prepare failed: ' . $db->error]);
+                    break;
+                }
+
+                $bind_result = $stmt->bind_param("sdisssi", $name, $price, $stock, $category, $description, $is_available, $branch_id);
+
+                if (!$bind_result) {
+                    echo json_encode(['success' => false, 'message' => 'Bind param failed: ' . $stmt->error]);
+                    break;
+                }
 
                 if ($stmt->execute()) {
                     $item_id = $db->insert_id;
                     echo json_encode(['success' => true, 'message' => 'Item created successfully', 'data' => ['id' => $item_id]]);
                 } else {
-                    echo json_encode(['success' => false, 'message' => 'Failed to create item']);
+                    echo json_encode(['success' => false, 'message' => 'Failed to create item: ' . $stmt->error]);
                 }
             } elseif ($action === 'update' && isset($_GET['id'])) {
                 // Update existing item
@@ -103,6 +157,16 @@ try {
                 $category = $input['category'] ?? 'other';
                 $description = $input['description'] ?? '';
                 $is_available = intval($input['is_available'] ?? 1);
+                $branch_id = intval($input['branch_id'] ?? 1);
+
+                // Check if user is a manager/staff and should be restricted to their branch
+                $userBranchId = Auth::userBranchId();
+                $isManagerRestricted = Auth::isManagerRestricted();
+
+                if ($isManagerRestricted && $userBranchId) {
+                    // Manager/Staff can only update items for their branch
+                    $branch_id = $userBranchId;
+                }
 
                 if (!$name || $price <= 0) {
                     echo json_encode(['success' => false, 'message' => 'Name and price are required']);
@@ -111,10 +175,10 @@ try {
 
                 $stmt = $db->prepare("
                     UPDATE food_and_drinks 
-                    SET name = ?, price = ?, stock = ?, category = ?, description = ?, is_available = ? 
+                    SET name = ?, price = ?, stock = ?, category = ?, description = ?, is_available = ?, branch_id = ?
                     WHERE id = ?
                 ");
-    $stmt->bind_param("sdissii", $name, $price, $stock, $category, $description, $is_available, $id);
+                $stmt->bind_param("sdisssii", $name, $price, $stock, $category, $description, $is_available, $branch_id, $id);
 
                 if ($stmt->execute()) {
                     echo json_encode(['success' => true, 'message' => 'Item updated successfully']);
@@ -149,12 +213,3 @@ try {
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
-
-
-
-
-
-
-
-
-

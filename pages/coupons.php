@@ -22,6 +22,16 @@ require_once __DIR__ . '/../includes/header.php';
         <h3 id="offer-modal-title">Create Coupon</h3>
         <form id="offer-form">
             <input type="hidden" id="offer-id">
+            <?php if (Auth::hasRole('Admin')): ?>
+                <div class="form-group">
+                    <label class="form-label">Branch *</label>
+                    <select class="form-control" id="offer-branch" required>
+                        <option value="">Select Branch</option>
+                    </select>
+                </div>
+            <?php else: ?>
+                <input type="hidden" id="offer-branch" value="<?php echo Auth::userBranchId() ?? 1; ?>">
+            <?php endif; ?>
             <div class="form-group">
                 <label class="form-label">Name</label>
                 <input class="form-control" id="offer-name" type="text" required>
@@ -97,6 +107,27 @@ require_once __DIR__ . '/../includes/header.php';
 </div>
 
 <script>
+    // Load branches
+    function loadBranches() {
+        fetch(`${SITE_URL}/api/coupons.php?action=branches`)
+            .then(res => res.json())
+            .then(result => {
+                if (result.success) {
+                    const select = document.getElementById('offer-branch');
+                    if (select) {
+                        select.innerHTML = '<option value="">Select Branch</option>';
+
+                        result.data.forEach(branch => {
+                            const option = document.createElement('option');
+                            option.value = branch.id;
+                            option.textContent = `${branch.name} - ${branch.location}`;
+                            select.appendChild(option);
+                        });
+                    }
+                }
+            });
+    }
+
     // Load coupons
     function loadCoupons() {
         fetch(`${SITE_URL}/api/coupons.php?action=list`)
@@ -159,6 +190,7 @@ require_once __DIR__ . '/../includes/header.php';
                             
                             <div class="coupon-details">
                                 ${valueDisplay}
+                                <p><strong>Branch:</strong> ${coupon.branch_name || 'Unknown'} - ${coupon.branch_location || 'Unknown'}</p>
                             </div>
                             
                             <div class="coupon-usage">
@@ -248,7 +280,7 @@ require_once __DIR__ . '/../includes/header.php';
             min_order_amount: document.getElementById('offer-min-order-amount').value || 0,
             valid_from: document.getElementById('offer-valid-from').value || null,
             valid_to: document.getElementById('offer-valid-to').value || null,
-            branch_id: 1,
+            branch_id: document.getElementById('offer-branch').value,
             status: document.getElementById('offer-active').checked ? 'Active' : 'Inactive'
         };
 
@@ -296,6 +328,10 @@ require_once __DIR__ . '/../includes/header.php';
                         document.getElementById('offer-min-order-amount').value = coupon.min_order_amount;
                         document.getElementById('offer-valid-from').value = coupon.valid_from;
                         document.getElementById('offer-valid-to').value = coupon.valid_to;
+                        const branchElement = document.getElementById('offer-branch');
+                        if (branchElement) {
+                            branchElement.value = coupon.branch_id || '';
+                        }
                         document.getElementById('offer-active').checked = coupon.status === 'Active';
 
                         // Toggle field visibility based on discount type
@@ -326,6 +362,7 @@ require_once __DIR__ . '/../includes/header.php';
     }
 
     // Initial load
+    loadBranches();
     loadCoupons();
 </script>
 

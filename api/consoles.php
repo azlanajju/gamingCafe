@@ -15,18 +15,42 @@ try {
             if ($action === 'list') {
                 // Get all consoles with session information
                 $status_filter = $_GET['status'] ?? '';
-                $where_clause = '';
+                $branch_filter = $_GET['branch'] ?? '';
+
+                // Check if user is a manager and should be restricted to their branch
+                $userBranchId = Auth::userBranchId();
+                $isManagerRestricted = Auth::isManagerRestricted();
+
+                $where_conditions = [];
                 $params = [];
                 $param_types = '';
 
                 if ($status_filter) {
-                    $where_clause = "WHERE c.status = ?";
+                    $where_conditions[] = "c.status = ?";
                     $params[] = $status_filter;
                     $param_types .= 's';
                 }
 
+                if ($branch_filter) {
+                    $where_conditions[] = "c.branch_id = ?";
+                    $params[] = intval($branch_filter);
+                    $param_types .= 'i';
+                } elseif ($isManagerRestricted && $userBranchId) {
+                    // Manager can only see consoles from their branch
+                    $where_conditions[] = "c.branch_id = ?";
+                    $params[] = $userBranchId;
+                    $param_types .= 'i';
+                }
+
+                $where_clause = '';
+                if (!empty($where_conditions)) {
+                    $where_clause = "WHERE " . implode(' AND ', $where_conditions);
+                }
+
                 $stmt = $db->prepare("
                     SELECT c.*, 
+                           b.name as branch_name,
+                           b.location as branch_location,
                            gs.id as session_id,
                            gs.customer_name,
                            gs.customer_number,
@@ -56,6 +80,7 @@ try {
                                ELSE '00:00:00'
                            END as formatted_time
                     FROM consoles c
+                    LEFT JOIN branches b ON c.branch_id = b.id
                     LEFT JOIN gaming_sessions gs ON c.id = gs.console_id AND gs.status IN ('active', 'paused')
                     {$where_clause}
                     ORDER BY c.id DESC
@@ -135,6 +160,15 @@ try {
             $data = json_decode(file_get_contents('php://input'), true);
 
             if ($action === 'create') {
+                // Check if user is a manager and should be restricted to their branch
+                $userBranchId = Auth::userBranchId();
+                $isManagerRestricted = Auth::isManagerRestricted();
+
+                if ($isManagerRestricted && $userBranchId) {
+                    // Manager can only create consoles for their branch
+                    $data['branch_id'] = $userBranchId;
+                }
+
                 // Create new console
                 $stmt = $db->prepare("INSERT INTO consoles (name, type, specifications, purchase_year, email, primary_user, location, has_plus_account, under_maintenance, branch_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
@@ -161,10 +195,10 @@ try {
             } elseif ($action === 'update') {
                 // Update console
                 $id = intval($data['id']);
-                $stmt = $db->prepare("UPDATE consoles SET name = ?, type = ?, specifications = ?, purchase_year = ?, email = ?, primary_user = ?, location = ?, has_plus_account = ?, under_maintenance = ? WHERE id = ?");
+                $stmt = $db->prepare("UPDATE consoles SET name = ?, type = ?, specifications = ?, purchase_year = ?, email = ?, primary_user = ?, location = ?, has_plus_account = ?, under_maintenance = ?, branch_id = ? WHERE id = ?");
 
                 $stmt->bind_param(
-                    "sssississi",
+                    "sssississii",
                     $data['name'],
                     $data['type'],
                     $data['specifications'],
@@ -174,6 +208,7 @@ try {
                     $data['location'],
                     $data['has_plus_account'],
                     $data['under_maintenance'],
+                    $data['branch_id'],
                     $id
                 );
 

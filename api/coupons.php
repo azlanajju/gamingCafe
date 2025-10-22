@@ -15,11 +15,37 @@ try {
             if ($action === 'list') {
                 // Filter by status if provided, otherwise get all
                 $status = $_GET['status'] ?? '';
+
+                // Check if user is a manager and should be restricted to their branch
+                $userBranchId = Auth::userBranchId();
+                $isManagerRestricted = Auth::isManagerRestricted();
+
                 if ($status) {
-                    $stmt = $db->prepare("SELECT * FROM coupons WHERE status = ? ORDER BY id DESC");
-                    $stmt->bind_param("s", $status);
+                    $query = "SELECT c.*, b.name as branch_name, b.location as branch_location FROM coupons c LEFT JOIN branches b ON c.branch_id = b.id WHERE c.status = ?";
+                    $params = [$status];
+                    $param_types = 's';
+
+                    if ($isManagerRestricted && $userBranchId) {
+                        $query .= " AND c.branch_id = ?";
+                        $params[] = $userBranchId;
+                        $param_types .= 'i';
+                    }
+
+                    $query .= " ORDER BY c.id DESC";
+                    $stmt = $db->prepare($query);
+                    $stmt->bind_param($param_types, ...$params);
                 } else {
-                    $stmt = $db->prepare("SELECT * FROM coupons ORDER BY id DESC");
+                    $query = "SELECT c.*, b.name as branch_name, b.location as branch_location FROM coupons c LEFT JOIN branches b ON c.branch_id = b.id";
+
+                    if ($isManagerRestricted && $userBranchId) {
+                        $query .= " WHERE c.branch_id = ?";
+                        $query .= " ORDER BY c.id DESC";
+                        $stmt = $db->prepare($query);
+                        $stmt->bind_param("i", $userBranchId);
+                    } else {
+                        $query .= " ORDER BY c.id DESC";
+                        $stmt = $db->prepare($query);
+                    }
                 }
                 $stmt->execute();
                 $result = $stmt->get_result();
@@ -132,6 +158,16 @@ try {
                 } else {
                     echo json_encode(['success' => false, 'message' => 'Invalid coupon code']);
                 }
+            } elseif ($action === 'branches') {
+                // Get list of branches for selection
+                $stmt = $db->prepare("SELECT id, name, location FROM branches WHERE status = 'Active' ORDER BY name");
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $branches = [];
+                while ($row = $result->fetch_assoc()) {
+                    $branches[] = $row;
+                }
+                echo json_encode(['success' => true, 'data' => $branches]);
             }
             break;
 
@@ -139,6 +175,15 @@ try {
             $data = json_decode(file_get_contents('php://input'), true);
 
             if ($action === 'create') {
+                // Check if user is a manager and should be restricted to their branch
+                $userBranchId = Auth::userBranchId();
+                $isManagerRestricted = Auth::isManagerRestricted();
+
+                if ($isManagerRestricted && $userBranchId) {
+                    // Manager can only create coupons for their branch
+                    $data['branch_id'] = $userBranchId;
+                }
+
                 $stmt = $db->prepare("INSERT INTO coupons (name, code, description, discount_type, discount_value, base_minutes, bonus_minutes, loop_bonus, usage_limit, min_order_amount, valid_from, valid_to, branch_id, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
                 $stmt->bind_param(

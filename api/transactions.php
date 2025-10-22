@@ -17,11 +17,13 @@ try {
                 $endDate = $_GET['end_date'] ?? null;
                 $consoleId = $_GET['console_id'] ?? null;
                 $paymentMethod = $_GET['payment_method'] ?? null;
+                $branchId = $_GET['branch_id'] ?? null;
 
-                $query = "SELECT t.*, u.full_name as user_name, c.name as console_name
+                $query = "SELECT t.*, u.full_name as user_name, c.name as console_name, b.name as branch_name, b.location as branch_location
                          FROM transactions t 
                          LEFT JOIN users u ON t.created_by = u.id 
                          LEFT JOIN consoles c ON t.console_id = c.id
+                         LEFT JOIN branches b ON t.branch_id = b.id
                          WHERE 1=1";
 
                 $params = [];
@@ -49,6 +51,12 @@ try {
                     $query .= " AND t.payment_method = ?";
                     $params[] = $paymentMethod;
                     $types .= "s";
+                }
+
+                if ($branchId) {
+                    $query .= " AND t.branch_id = ?";
+                    $params[] = $branchId;
+                    $types .= "i";
                 }
 
                 $query .= " ORDER BY t.created_at DESC";

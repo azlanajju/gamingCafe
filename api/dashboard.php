@@ -14,6 +14,20 @@ try {
         if ($action === 'stats') {
             $period = $_GET['period'] ?? 'daily'; // daily, monthly, yearly
 
+            // Check if user is a manager and should be restricted to their branch
+            $userBranchId = Auth::userBranchId();
+            $isManagerRestricted = Auth::isManagerRestricted();
+
+            $branchCondition = '';
+            $branchParams = [];
+            $branchParamTypes = '';
+
+            if ($isManagerRestricted && $userBranchId) {
+                $branchCondition = " AND branch_id = ?";
+                $branchParams[] = $userBranchId;
+                $branchParamTypes = 'i';
+            }
+
             $dateCondition = "DATE(created_at) = CURDATE()";
             if ($period === 'monthly') {
                 $dateCondition = "MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE())";
@@ -30,12 +44,25 @@ try {
                 COUNT(DISTINCT customer_name) as total_customers,
                 COUNT(*) as total_transactions
             FROM transactions 
-            WHERE $dateCondition");
+            WHERE $dateCondition $branchCondition");
+
+            if (!empty($branchParams)) {
+                $revenueStmt->bind_param($branchParamTypes, ...$branchParams);
+            }
             $revenueStmt->execute();
             $revenueStats = $revenueStmt->get_result()->fetch_assoc();
 
             // Get active consoles count (using gaming_sessions table)
-            $consoleStmt = $db->prepare("SELECT COUNT(*) as active_consoles FROM gaming_sessions WHERE status IN ('active', 'paused')");
+            $consoleQuery = "SELECT COUNT(*) as active_consoles FROM gaming_sessions gs 
+                            LEFT JOIN consoles c ON gs.console_id = c.id 
+                            WHERE gs.status IN ('active', 'paused')";
+            if ($isManagerRestricted && $userBranchId) {
+                $consoleQuery .= " AND c.branch_id = ?";
+            }
+            $consoleStmt = $db->prepare($consoleQuery);
+            if ($isManagerRestricted && $userBranchId) {
+                $consoleStmt->bind_param("i", $userBranchId);
+            }
             $consoleStmt->execute();
             $consoleStats = $consoleStmt->get_result()->fetch_assoc();
 
@@ -45,36 +72,56 @@ try {
             $sessionStats = $sessionStmt->get_result()->fetch_assoc();
 
             // Get peak hours (hour with most transactions)
-            $peakStmt = $db->prepare("SELECT HOUR(created_at) as hour, COUNT(*) as count FROM transactions WHERE $dateCondition GROUP BY HOUR(created_at) ORDER BY count DESC LIMIT 1");
+            $peakQuery = "SELECT HOUR(created_at) as hour, COUNT(*) as count FROM transactions WHERE $dateCondition $branchCondition GROUP BY HOUR(created_at) ORDER BY count DESC LIMIT 1";
+            $peakStmt = $db->prepare($peakQuery);
+            if (!empty($branchParams)) {
+                $peakStmt->bind_param($branchParamTypes, ...$branchParams);
+            }
             $peakStmt->execute();
             $peakStats = $peakStmt->get_result()->fetch_assoc();
 
             // Calculate utilization percentage
-            $totalConsolesStmt = $db->prepare("SELECT COUNT(*) as total FROM consoles WHERE status != 'Maintenance'");
+            $totalConsolesQuery = "SELECT COUNT(*) as total FROM consoles WHERE status != 'Maintenance'";
+            if ($isManagerRestricted && $userBranchId) {
+                $totalConsolesQuery .= " AND branch_id = ?";
+            }
+            $totalConsolesStmt = $db->prepare($totalConsolesQuery);
+            if ($isManagerRestricted && $userBranchId) {
+                $totalConsolesStmt->bind_param("i", $userBranchId);
+            }
             $totalConsolesStmt->execute();
             $totalConsoles = $totalConsolesStmt->get_result()->fetch_assoc()['total'];
             $utilization = $totalConsoles > 0 ? ($consoleStats['active_consoles'] / $totalConsoles) * 100 : 0;
 
             // Compute total running time across all currently active/paused sessions
             // Sum of (now - start_time) minus pauses, including ongoing pause time
-            $uptimeStmt = $db->prepare("
+            $uptimeQuery = "
                 SELECT 
                     COUNT(*) AS active_sessions,
                     SUM(
                         GREATEST(
-                            TIMESTAMPDIFF(SECOND, start_time, NOW())
-                            - COALESCE(total_pause_duration, 0)
+                            TIMESTAMPDIFF(SECOND, gs.start_time, NOW())
+                            - COALESCE(gs.total_pause_duration, 0)
                             - CASE 
-                                WHEN status = 'paused' AND pause_start_time IS NOT NULL 
-                                THEN TIMESTAMPDIFF(SECOND, pause_start_time, NOW())
+                                WHEN gs.status = 'paused' AND gs.pause_start_time IS NOT NULL 
+                                THEN TIMESTAMPDIFF(SECOND, gs.pause_start_time, NOW())
                                 ELSE 0
                               END,
                             0
                         )
                     ) AS total_running_seconds
-                FROM gaming_sessions
-                WHERE status IN ('active', 'paused')
-            ");
+                FROM gaming_sessions gs
+                LEFT JOIN consoles c ON gs.console_id = c.id
+                WHERE gs.status IN ('active', 'paused')";
+
+            if ($isManagerRestricted && $userBranchId) {
+                $uptimeQuery .= " AND c.branch_id = ?";
+            }
+
+            $uptimeStmt = $db->prepare($uptimeQuery);
+            if ($isManagerRestricted && $userBranchId) {
+                $uptimeStmt->bind_param("i", $userBranchId);
+            }
             $uptimeStmt->execute();
             $uptimeRow = $uptimeStmt->get_result()->fetch_assoc() ?: ['active_sessions' => 0, 'total_running_seconds' => 0];
 
@@ -104,27 +151,49 @@ try {
         } elseif ($action === 'charts') {
             $period = $_GET['period'] ?? 'daily';
 
-            // Revenue chart data
-            if ($period === 'daily') {
-                $revenueChartStmt = $db->prepare("SELECT HOUR(created_at) as label, SUM(total_amount) as value FROM transactions WHERE DATE(created_at) = CURDATE() GROUP BY HOUR(created_at) ORDER BY label");
-            } elseif ($period === 'monthly') {
-                $revenueChartStmt = $db->prepare("SELECT DAY(created_at) as label, SUM(total_amount) as value FROM transactions WHERE MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE()) GROUP BY DAY(created_at) ORDER BY label");
-            } else {
-                $revenueChartStmt = $db->prepare("SELECT MONTH(created_at) as label, SUM(total_amount) as value FROM transactions WHERE YEAR(created_at) = YEAR(CURDATE()) GROUP BY MONTH(created_at) ORDER BY label");
+            // Check if user is a manager and should be restricted to their branch
+            $userBranchId = Auth::userBranchId();
+            $isManagerRestricted = Auth::isManagerRestricted();
+
+            $branchCondition = '';
+            $branchParams = [];
+            $branchParamTypes = '';
+
+            if ($isManagerRestricted && $userBranchId) {
+                $branchCondition = " AND branch_id = ?";
+                $branchParams[] = $userBranchId;
+                $branchParamTypes = 'i';
             }
 
+            // Revenue chart data
+            if ($period === 'daily') {
+                $revenueChartQuery = "SELECT HOUR(created_at) as label, SUM(total_amount) as value FROM transactions WHERE DATE(created_at) = CURDATE() $branchCondition GROUP BY HOUR(created_at) ORDER BY label";
+            } elseif ($period === 'monthly') {
+                $revenueChartQuery = "SELECT DAY(created_at) as label, SUM(total_amount) as value FROM transactions WHERE MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE()) $branchCondition GROUP BY DAY(created_at) ORDER BY label";
+            } else {
+                $revenueChartQuery = "SELECT MONTH(created_at) as label, SUM(total_amount) as value FROM transactions WHERE YEAR(created_at) = YEAR(CURDATE()) $branchCondition GROUP BY MONTH(created_at) ORDER BY label";
+            }
+
+            $revenueChartStmt = $db->prepare($revenueChartQuery);
+            if (!empty($branchParams)) {
+                $revenueChartStmt->bind_param($branchParamTypes, ...$branchParams);
+            }
             $revenueChartStmt->execute();
             $revenueChart = $revenueChartStmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
             // Customer trend
             if ($period === 'daily') {
-                $customerChartStmt = $db->prepare("SELECT HOUR(created_at) as label, COUNT(DISTINCT customer_name) as value FROM transactions WHERE DATE(created_at) = CURDATE() GROUP BY HOUR(created_at) ORDER BY label");
+                $customerChartQuery = "SELECT HOUR(created_at) as label, COUNT(DISTINCT customer_name) as value FROM transactions WHERE DATE(created_at) = CURDATE() $branchCondition GROUP BY HOUR(created_at) ORDER BY label";
             } elseif ($period === 'monthly') {
-                $customerChartStmt = $db->prepare("SELECT DAY(created_at) as label, COUNT(DISTINCT customer_name) as value FROM transactions WHERE MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE()) GROUP BY DAY(created_at) ORDER BY label");
+                $customerChartQuery = "SELECT DAY(created_at) as label, COUNT(DISTINCT customer_name) as value FROM transactions WHERE MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE()) $branchCondition GROUP BY DAY(created_at) ORDER BY label";
             } else {
-                $customerChartStmt = $db->prepare("SELECT MONTH(created_at) as label, COUNT(DISTINCT customer_name) as value FROM transactions WHERE YEAR(created_at) = YEAR(CURDATE()) GROUP BY MONTH(created_at) ORDER BY label");
+                $customerChartQuery = "SELECT MONTH(created_at) as label, COUNT(DISTINCT customer_name) as value FROM transactions WHERE YEAR(created_at) = YEAR(CURDATE()) $branchCondition GROUP BY MONTH(created_at) ORDER BY label";
             }
 
+            $customerChartStmt = $db->prepare($customerChartQuery);
+            if (!empty($branchParams)) {
+                $customerChartStmt->bind_param($branchParamTypes, ...$branchParams);
+            }
             $customerChartStmt->execute();
             $customerChart = $customerChartStmt->get_result()->fetch_all(MYSQLI_ASSOC);
 

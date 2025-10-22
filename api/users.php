@@ -24,6 +24,16 @@ try {
                 }
 
                 echo json_encode(['success' => true, 'data' => $users]);
+            } elseif ($action === 'branches') {
+                // Get list of branches for selection
+                $stmt = $db->prepare("SELECT id, name, location FROM branches WHERE status = 'Active' ORDER BY name");
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $branches = [];
+                while ($row = $result->fetch_assoc()) {
+                    $branches[] = $row;
+                }
+                echo json_encode(['success' => true, 'data' => $branches]);
             }
             break;
 
@@ -134,4 +144,3 @@ try {
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
-

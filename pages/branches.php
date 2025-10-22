@@ -42,8 +42,14 @@ if (!Auth::hasRole('Admin')) {
                 <input type="tel" class="form-control" id="branch-contact" required>
             </div>
             <div class="form-group">
-                <label class="form-label">Manager Name *</label>
-                <input type="text" class="form-control" id="branch-manager" required>
+                <label class="form-label">Branch Manager *</label>
+                <select class="form-control" id="branch-manager-select" required>
+                    <option value="">Select a Manager</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Manager Name (Display) *</label>
+                <input type="text" class="form-control" id="branch-manager" required readonly>
             </div>
             <div class="form-group">
                 <label class="form-label">Timing *</label>
@@ -72,6 +78,25 @@ if (!Auth::hasRole('Admin')) {
 </div>
 
 <script>
+    // Load managers
+    function loadManagers() {
+        fetch(`${SITE_URL}/api/branches.php?action=managers`)
+            .then(res => res.json())
+            .then(result => {
+                if (result.success) {
+                    const select = document.getElementById('branch-manager-select');
+                    select.innerHTML = '<option value="">Select a Manager</option>';
+
+                    result.data.forEach(manager => {
+                        const option = document.createElement('option');
+                        option.value = manager.id;
+                        option.textContent = `${manager.full_name} (${manager.username})`;
+                        select.appendChild(option);
+                    });
+                }
+            });
+    }
+
     // Load branches
     function loadBranches() {
         fetch(`${SITE_URL}/api/branches.php?action=list`)
@@ -85,11 +110,12 @@ if (!Auth::hasRole('Admin')) {
                         const card = document.createElement('div');
                         card.className = 'branch-card card';
                         const statusClass = branch.status === 'Active' ? 'status-active' : 'status-inactive';
+                        const managerDisplay = branch.manager_full_name || branch.manager_name || 'Not Assigned';
                         card.innerHTML = `
                         <h3>${branch.name}</h3>
                         <p><strong>Location:</strong> ${branch.location}</p>
                         <p><strong>Address:</strong> ${branch.address}</p>
-                        <p><strong>Manager:</strong> ${branch.manager_name}</p>
+                        <p><strong>Manager:</strong> ${managerDisplay}</p>
                         <p><strong>Contact:</strong> ${branch.contact}</p>
                         <p><strong>Consoles:</strong> ${branch.console_count}</p>
                         <p class="${statusClass}"><strong>Status:</strong> ${branch.status}</p>
@@ -103,6 +129,18 @@ if (!Auth::hasRole('Admin')) {
                 }
             });
     }
+
+    // Manager selection handler
+    document.getElementById('branch-manager-select').addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const managerNameField = document.getElementById('branch-manager');
+
+        if (this.value) {
+            managerNameField.value = selectedOption.textContent.split(' (')[0]; // Get just the name part
+        } else {
+            managerNameField.value = '';
+        }
+    });
 
     // Add branch button
     document.getElementById('add-branch-btn').addEventListener('click', () => {
@@ -128,6 +166,7 @@ if (!Auth::hasRole('Admin')) {
             address: document.getElementById('branch-address').value,
             contact: document.getElementById('branch-contact').value,
             manager_name: document.getElementById('branch-manager').value,
+            manager_id: document.getElementById('branch-manager-select').value || null,
             timing: document.getElementById('branch-timing').value,
             console_count: document.getElementById('branch-console').value,
             established_year: document.getElementById('branch-established').value,
@@ -171,6 +210,7 @@ if (!Auth::hasRole('Admin')) {
                         document.getElementById('branch-address').value = branch.address;
                         document.getElementById('branch-contact').value = branch.contact;
                         document.getElementById('branch-manager').value = branch.manager_name;
+                        document.getElementById('branch-manager-select').value = branch.manager_id || '';
                         document.getElementById('branch-timing').value = branch.timing;
                         document.getElementById('branch-console').value = branch.console_count;
                         document.getElementById('branch-established').value = branch.established_year;
@@ -200,13 +240,8 @@ if (!Auth::hasRole('Admin')) {
     }
 
     // Initial load
+    loadManagers();
     loadBranches();
 </script>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
-
-
-
-
-
-

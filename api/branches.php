@@ -14,7 +14,7 @@ try {
     switch ($method) {
         case 'GET':
             if ($action === 'list') {
-                $stmt = $db->prepare("SELECT * FROM branches ORDER BY id DESC");
+                $stmt = $db->prepare("SELECT b.*, u.full_name as manager_full_name FROM branches b LEFT JOIN users u ON b.manager_id = u.id ORDER BY b.id DESC");
                 $stmt->execute();
                 $result = $stmt->get_result();
                 $branches = [];
@@ -24,6 +24,18 @@ try {
                 }
 
                 echo json_encode(['success' => true, 'data' => $branches]);
+            } elseif ($action === 'managers') {
+                // Get list of users who can be managers (Admin or Manager role)
+                $stmt = $db->prepare("SELECT id, full_name, username FROM users WHERE role IN ('Admin', 'Manager') AND status = 'Active' ORDER BY full_name");
+                $stmt->execute();
+                $result = $stmt->get_result();
+                $managers = [];
+
+                while ($row = $result->fetch_assoc()) {
+                    $managers[] = $row;
+                }
+
+                echo json_encode(['success' => true, 'data' => $managers]);
             }
             break;
 
@@ -31,15 +43,16 @@ try {
             $data = json_decode(file_get_contents('php://input'), true);
 
             if ($action === 'create') {
-                $stmt = $db->prepare("INSERT INTO branches (name, location, address, contact, manager_name, timing, console_count, established_year, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt = $db->prepare("INSERT INTO branches (name, location, address, contact, manager_name, manager_id, timing, console_count, established_year, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
                 $stmt->bind_param(
-                    "ssssssiis",
+                    "ssssssiisi",
                     $data['name'],
                     $data['location'],
                     $data['address'],
                     $data['contact'],
                     $data['manager_name'],
+                    $data['manager_id'],
                     $data['timing'],
                     $data['console_count'],
                     $data['established_year'],
@@ -54,7 +67,7 @@ try {
                 }
             } elseif ($action === 'update') {
                 $id = intval($data['id']);
-                $stmt = $db->prepare("UPDATE branches SET name = ?, location = ?, address = ?, contact = ?, manager_name = ?, timing = ?, console_count = ?, established_year = ?, status = ? WHERE id = ?");
+                $stmt = $db->prepare("UPDATE branches SET name = ?, location = ?, address = ?, contact = ?, manager_name = ?, manager_id = ?, timing = ?, console_count = ?, established_year = ?, status = ? WHERE id = ?");
 
                 $stmt->bind_param(
                     "ssssssiisi",
@@ -63,6 +76,7 @@ try {
                     $data['address'],
                     $data['contact'],
                     $data['manager_name'],
+                    $data['manager_id'],
                     $data['timing'],
                     $data['console_count'],
                     $data['established_year'],
@@ -107,4 +121,3 @@ try {
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
-
