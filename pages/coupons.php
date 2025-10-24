@@ -108,7 +108,7 @@ require_once __DIR__ . '/../includes/header.php';
 
 <script>
     // Load branches
-    function loadBranches() {
+    function loadCouponBranches() {
         fetch(`${SITE_URL}/api/coupons.php?action=branches`)
             .then(res => res.json())
             .then(result => {
@@ -129,10 +129,19 @@ require_once __DIR__ . '/../includes/header.php';
     }
 
     // Load coupons
-    function loadCoupons() {
-        fetch(`${SITE_URL}/api/coupons.php?action=list`)
+    function loadCoupons(branchId = '') {
+        let url = `${SITE_URL}/api/coupons.php?action=list`;
+        if (branchId) {
+            url += `&branch_id=${branchId}`;
+        }
+
+        console.log('Loading coupons with URL:', url);
+        console.log('Branch ID:', branchId);
+
+        fetch(url)
             .then(res => res.json())
             .then(result => {
+                console.log('Coupons API response:', result);
                 if (result.success) {
                     const grid = document.getElementById('offers-grid');
                     grid.innerHTML = '';
@@ -362,7 +371,7 @@ require_once __DIR__ . '/../includes/header.php';
     }
 
     // Initial load
-    loadBranches();
+    loadCouponBranches();
     loadCoupons();
 </script>
 
@@ -626,5 +635,40 @@ require_once __DIR__ . '/../includes/header.php';
         animation: slideInUp 0.3s ease-out;
     }
 </style>
+
+<script>
+    // Listen for topbar branch changes and filter coupons
+    window.addEventListener('branchChanged', function(event) {
+        console.log('Coupons: Branch changed to:', event.detail);
+        const selectedBranchId = event.detail.branchId;
+
+        if (selectedBranchId) {
+            // Filter coupons by selected branch
+            loadCoupons(selectedBranchId);
+        } else {
+            // Show all coupons
+            loadCoupons();
+        }
+    });
+
+    // Ensure branch selection is restored on this page
+    document.addEventListener('DOMContentLoaded', function() {
+        // Wait for branches to load, then restore selection
+        setTimeout(function() {
+            if (typeof window.restoreBranchSelection === 'function') {
+                console.log('Coupons page: Attempting branch restoration...');
+                window.restoreBranchSelection();
+            }
+
+            // Load coupons based on current topbar selection
+            const selectedBranchId = localStorage.getItem('selectedBranchId');
+            if (selectedBranchId) {
+                loadCoupons(selectedBranchId);
+            } else {
+                loadCoupons();
+            }
+        }, 1000);
+    });
+</script>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

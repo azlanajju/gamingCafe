@@ -199,7 +199,7 @@ $peakHours = '';
 
     // Update individual pricing table
     function updatePricingTable(type, pricingData) {
-        const tableBody = document.querySelector(`#${type}-pricing tbody`);
+        const tableBody = document.querySelector(`#${type}-pricing`);
         if (!tableBody) return;
 
         tableBody.innerHTML = '';

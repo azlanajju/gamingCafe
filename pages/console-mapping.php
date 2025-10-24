@@ -402,30 +402,7 @@ require_once __DIR__ . '/../includes/header.php';
 
                             // Get session items for display
                             const sessionItems = session.items || session.fandd_items || [];
-                            let itemsDisplay = '';
-                            if (sessionItems.length > 0) {
-                                itemsDisplay = `
-                                    <div class="session-items">
-                                        <div class="items-label">Items:</div>
-                                        ${sessionItems.map(item => `
-                                            <div class="session-item">
-                                                <span>${item.name || item.item_name} (${item.quantity})</span>
-                                                <button class="remove-item-btn" onclick="removeSessionItem(${console.id}, ${item.id})" title="Remove Item">✕</button>
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                `;
-                            } else {
-                                // Show placeholder for items even if none exist
-                                itemsDisplay = `
-                                    <div class="session-items">
-                                        <div class="items-label">Items:</div>
-                                        <div class="session-item">
-                                            <span>No items added</span>
-                                        </div>
-                                    </div>
-                                `;
-                            }
+                            // Items section removed - F&D items now shown in dedicated card
 
                             sessionContent = `
                                 <div class="occupied-session">
@@ -434,8 +411,32 @@ require_once __DIR__ . '/../includes/header.php';
                                         <p><strong>Customer:</strong> ${session.customer_name}</p>
                                         <p><strong>Current Players:</strong> ${session.player_count}</p>
                                         <p><strong>Rate Type:</strong> ${session.rate_type.charAt(0).toUpperCase() + session.rate_type.slice(1)}</p>
-                                        <p><strong></strong> </p>
-                                        ${itemsDisplay}
+                                    </div>
+                                    
+                                    <div class="session-data-grid">
+                                        <div class="data-column">
+                                            <div class="data-card segments-card">
+                                                <h4>Gaming Segments</h4>
+                                                <div class="segments-list" id="segments-${console.id}">
+                                                    <div class="segment-item">
+                                                        <span class="segment-players">${session.player_count} players</span>
+                                                        <span class="segment-time">${session.formatted_time || '00:00:00'}</span>
+                                                        <span class="segment-amount">₹${parseFloat(session.gaming_amount || 0).toFixed(2)}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="data-column">
+                                            <div class="data-card fandd-card">
+                                                <h4>Food & Drinks</h4>
+                                                <div class="fandd-list" id="fandd-${console.id}">
+                                                    <div class="fandd-item">
+                                                        <span class="fandd-name">No items added</span>
+                                                        <span class="fandd-amount">₹0.00</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             `;
@@ -566,6 +567,12 @@ require_once __DIR__ . '/../includes/header.php';
                         if (console.current_session && !console.current_session.is_paused) {
                             startSessionTimer(console.id, console.current_session.id);
                         }
+
+                        // Initialize segments and F&D data for occupied consoles
+                        if (console.current_session) {
+                            updateSegmentsData(console.id, console.current_session);
+                            updateFandDData(console.id, console.current_session);
+                        }
                     });
                 } else {
                     grid.innerHTML = `<p style="text-align: center; padding: 20px; color: red;">Error: ${result.message || 'Failed to load consoles'}</p>`;
@@ -578,7 +585,7 @@ require_once __DIR__ . '/../includes/header.php';
     }
 
     // Load branches for console form
-    function loadBranches() {
+    function loadConsoleBranches() {
         fetch(`${SITE_URL}/api/branches.php?action=list`)
             .then(res => res.json())
             .then(result => {
@@ -785,7 +792,188 @@ require_once __DIR__ . '/../includes/header.php';
             .then(result => {
                 if (result.success) {
                     timerElement.textContent = result.data.formatted_time;
+
+                    // Update segments data
+                    updateSegmentsData(consoleId, result.data);
+
+                    // Update F&D data
+                    updateFandDData(consoleId, result.data);
                 }
+            });
+    }
+
+    // Update segments data in the card
+    function updateSegmentsData(consoleId, sessionData) {
+        const segmentsList = document.querySelector(`#segments-${consoleId}`);
+        if (!segmentsList) return;
+
+        // First get the session_id from the console
+        fetch(`${SITE_URL}/api/sessions.php?action=get_time&console_id=${consoleId}`)
+            .then(res => res.json())
+            .then(timeResult => {
+                if (timeResult.success && timeResult.data.session_id) {
+                    // Now fetch the segments using the session_id
+                    return fetch(`${SITE_URL}/api/sessions.php?action=get_session_segments&session_id=${timeResult.data.session_id}`);
+                } else {
+                    throw new Error('No active session found');
+                }
+            })
+            .then(res => res.json())
+            .then(result => {
+                if (result.success && result.data && result.data.length > 0) {
+                    segmentsList.innerHTML = result.data.map(segment => {
+                        // Calculate exact duration from start_time and end_time
+                        const exactDuration = calculateExactDuration(segment.start_time, segment.end_time);
+                        return `
+                            <div class="segment-item">
+                                <span class="segment-players">${segment.player_count} players</span>
+                                <span class="segment-time">${exactDuration}</span>
+                                <span class="segment-amount">₹${parseFloat(segment.calculated_amount || segment.amount || 0).toFixed(2)}</span>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    // Show current session as a segment if no segments found
+                    segmentsList.innerHTML = `
+                        <div class="segment-item">
+                            <span class="segment-players">${sessionData.player_count || 1} players</span>
+                            <span class="segment-time">${sessionData.formatted_time || '00:00:00'}</span>
+                            <span class="segment-amount">₹${parseFloat(sessionData.gaming_amount || 0).toFixed(2)}</span>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching segments:', error);
+                // Fallback to current session data
+                segmentsList.innerHTML = `
+                    <div class="segment-item">
+                        <span class="segment-players">${sessionData.player_count || 1} players</span>
+                        <span class="segment-time">${sessionData.formatted_time || '00:00:00'}</span>
+                        <span class="segment-amount">₹${parseFloat(sessionData.gaming_amount || 0).toFixed(2)}</span>
+                    </div>
+                `;
+            });
+    }
+
+    // Helper function to format duration from seconds
+    function formatDuration(seconds) {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    // Calculate exact duration from start_time and end_time
+    function calculateExactDuration(startTime, endTime) {
+        if (!startTime) return '00:00:00';
+
+        const start = new Date(startTime);
+        let end;
+
+        if (endTime) {
+            // Completed segment - use actual end_time
+            end = new Date(endTime);
+        } else {
+            // Current active segment - use current time
+            end = new Date();
+        }
+
+        const durationMs = end.getTime() - start.getTime();
+        const durationSeconds = Math.floor(durationMs / 1000);
+
+        return formatDuration(durationSeconds);
+    }
+
+    // Update F&D data in the card
+    function updateFandDData(consoleId, sessionData) {
+        const fanddList = document.querySelector(`#fandd-${consoleId}`);
+        if (!fanddList) return;
+
+        // First get the session_id from the console
+        fetch(`${SITE_URL}/api/sessions.php?action=get_time&console_id=${consoleId}`)
+            .then(res => res.json())
+            .then(timeResult => {
+                if (timeResult.success && timeResult.data.session_id) {
+                    // Fetch F&D items using the session_id
+                    return fetch(`${SITE_URL}/api/sessions.php?action=get_session_fandd&session_id=${timeResult.data.session_id}`);
+                } else {
+                    throw new Error('No active session found');
+                }
+            })
+            .then(res => res.json())
+            .then(result => {
+                if (result.success && result.data && result.data.length > 0) {
+                    fanddList.innerHTML = result.data.map(item => `
+                        <div class="fandd-item">
+                            <span class="fandd-name">${item.name} (${item.quantity})</span>
+                            <div class="fandd-actions">
+                                <span class="fandd-amount">₹${parseFloat(item.total_price || 0).toFixed(2)}</span>
+                                <button class="remove-fandd-btn" onclick="removeFandDItem(${consoleId}, ${item.id})" title="Remove Item">✕</button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    fanddList.innerHTML = `
+                        <div class="fandd-item">
+                            <span class="fandd-name">No items added</span>
+                            <span class="fandd-amount">₹0.00</span>
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching F&D items:', error);
+                // Fallback to no items
+                fanddList.innerHTML = `
+                    <div class="fandd-item">
+                        <span class="fandd-name">No items added</span>
+                        <span class="fandd-amount">₹0.00</span>
+                    </div>
+                `;
+            });
+    }
+
+    // Remove F&D item from session
+    function removeFandDItem(consoleId, itemId) {
+        console.log('Removing F&D item:', {
+            consoleId,
+            itemId
+        });
+
+        if (!consoleId || !itemId) {
+            alert('Error: Missing console ID or item ID');
+            return;
+        }
+
+        if (!confirm('Are you sure you want to remove this item? The inventory will be restocked.')) {
+            return;
+        }
+
+        fetch(`${SITE_URL}/api/sessions.php?action=remove_fandd`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    console_id: consoleId,
+                    item_id: itemId
+                })
+            })
+            .then(res => res.json())
+            .then(result => {
+                if (result.success) {
+                    // Refresh the F&D data for this console
+                    updateFandDData(consoleId, {});
+                    // Show success message
+                    alert('Item removed successfully and inventory restocked');
+                } else {
+                    alert('Error removing item: ' + result.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error removing F&D item:', error);
+                alert('Error removing item. Please try again.');
             });
     }
 
@@ -1761,6 +1949,31 @@ require_once __DIR__ . '/../includes/header.php';
                             margin: 2px 0;
                         }
                         
+                        .pause-item {
+                            margin: 8px 0;
+                            padding: 8px;
+                            border: 1px solid #ddd;
+                            border-radius: 4px;
+                            background: #f9f9f9;
+                        }
+
+                        .pause-header {
+                            font-weight: bold;
+                            font-size: 13px;
+                            color: #333;
+                            margin-bottom: 4px;
+                        }
+
+                        .pause-details {
+                            margin-left: 8px;
+                        }
+
+                        .pause-line {
+                            font-size: 11px;
+                            color: #666;
+                            margin: 1px 0;
+                        }
+                        
                         .receipt-summary {
                             margin: 15px 0;
                         }
@@ -1810,6 +2023,10 @@ require_once __DIR__ . '/../includes/header.php';
     function generatePrintableBill() {
         if (!currentBillingData) return '';
 
+        console.log('Generating printable bill with data:', currentBillingData);
+        console.log('Pauses data:', currentBillingData.pauses);
+        console.log('Segments data:', currentBillingData.segments);
+
         const hours = Math.floor(currentBillingData.duration_minutes / 60);
         const minutes = currentBillingData.duration_minutes % 60;
         const currentDate = new Date().toLocaleDateString('en-IN');
@@ -1834,16 +2051,69 @@ require_once __DIR__ . '/../includes/header.php';
                 </div>
 
                 <div class="receipt-section">
-                    <h3 class="section-title">Gaming Segments:</h3>
-                    <div class="segment-item">
-                        <div class="segment-header">Segment 1: ${currentBillingData.player_count || 1} players (${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:00)</div>
-                        <div class="segment-details">
-                            <div class="segment-line">Base Rate: ₹${parseFloat(currentBillingData.gaming_amount || 0).toFixed(2)}</div>
-                            <div class="segment-line">Multipliers: None</div>
-                            <div class="segment-line">Final: ₹${parseFloat(currentBillingData.gaming_amount || 0).toFixed(2)}</div>
-                        </div>
+                    <h3 class="section-title">Gaming Segments</h3>
+                    ${currentBillingData.segments && currentBillingData.segments.length > 0 ? 
+                        currentBillingData.segments.map((segment, index) => {
+                            const segmentHours = Math.floor((segment.calculated_duration_minutes || segment.duration || 0) / 60);
+                            const segmentMinutes = (segment.calculated_duration_minutes || segment.duration || 0) % 60;
+                            const segmentAmount = parseFloat(segment.calculated_amount || segment.amount || 0);
+                            
+                            return `
+                                <div class="segment-detail">
+                                    <div class="segment-players">${segment.player_count} players</div>
+                                    <div class="segment-time">${segmentHours.toString().padStart(2, '0')}:${segmentMinutes.toString().padStart(2, '0')}:00</div>
+                                    <div class="segment-amount">₹${segmentAmount.toFixed(2)}</div>
+                                </div>
+                            `;
+                        }).join('') : 
+                        ` <
+            div class = "segment-detail" >
+            <
+            div class = "segment-players" > $ {
+                currentBillingData.player_count || 1
+            }
+        players < /div> <
+        div class = "segment-time" > $ {
+            hours.toString().padStart(2, '0')
+        }: $ {
+            minutes.toString().padStart(2, '0')
+        }: 00 < /div> <
+        div class = "segment-amount" > ₹$ {
+            parseFloat(currentBillingData.gaming_amount || 0).toFixed(2)
+        } < /div> < /
+        div >
+            `
+                    }
+                </div>
+
+                ${currentBillingData.pauses && currentBillingData.pauses.length > 0 ? `
+                <div class="receipt-section">
+                    <h3 class="section-title">Pause Sessions:</h3>
+                    ${currentBillingData.pauses.map((pause, index) => {
+                        console.log('Rendering pause:', pause);
+                        const startTime = new Date(pause.pause_start).toLocaleTimeString();
+                        const endTime = pause.pause_end ? new Date(pause.pause_end).toLocaleTimeString() : 'Ongoing';
+                        const duration = pause.duration ? `${pause.duration} min` : 'Calculating...';
+                        return `
+                            <div class="pause-item">
+                                <div class="pause-header">Pause ${index + 1}: ${pause.reason}</div>
+                                <div class="pause-details">
+                                    <div class="pause-line">From: ${startTime}</div>
+                                    <div class="pause-line">To: ${endTime}</div>
+                                    <div class="pause-line">Duration: ${duration}</div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+                ` : `
+                <div class="receipt-section">
+                    <h3 class="section-title">Pause Sessions:</h3>
+                    <div class="pause-item">
+                        <div class="pause-header">No pauses recorded for this session</div>
                     </div>
                 </div>
+                `}
 
                 <div class="receipt-summary">
                     <div class="summary-line">
@@ -1939,7 +2209,7 @@ require_once __DIR__ . '/../includes/header.php';
     });
 
     // Initial load
-    loadBranches();
+    loadConsoleBranches();
 
     // For Managers and Staff, automatically filter by their branch
     <?php if (Auth::isManagerRestricted()): ?>
@@ -2459,6 +2729,182 @@ require_once __DIR__ . '/../includes/header.php';
     .bottom-buttons .btn--lg:disabled::before {
         content: '⛔';
         font-size: 14px;
+    }
+
+    /* Session Data Grid - 1 Column Layout */
+    .session-data-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 12px;
+        padding: 0 4px;
+    }
+
+    .data-column {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .data-card {
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        padding: 12px;
+        box-shadow: var(--shadow-xs);
+        transition: all 0.2s ease;
+    }
+
+    .data-card:hover {
+        border-color: var(--color-primary);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .data-card h4 {
+        margin: 0 0 8px 0;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--color-text);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid var(--color-border);
+        padding-bottom: 4px;
+    }
+
+    /* Segments Card */
+    .segments-card {
+        background: linear-gradient(135deg, rgba(var(--color-primary-rgb), 0.05) 0%, rgba(var(--color-primary-rgb), 0.02) 100%);
+        border-color: rgba(var(--color-primary-rgb), 0.2);
+    }
+
+    .segments-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .segment-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 8px;
+        background: rgba(var(--color-primary-rgb), 0.08);
+        border-radius: 6px;
+        border: 1px solid rgba(var(--color-primary-rgb), 0.15);
+        font-size: 11px;
+    }
+
+    .segment-players {
+        color: var(--color-primary);
+        font-weight: 600;
+    }
+
+    .segment-time {
+        color: var(--color-text-secondary);
+        font-family: 'Courier New', monospace;
+    }
+
+    .segment-amount {
+        color: var(--color-success);
+        font-weight: 600;
+    }
+
+    /* F&D Card */
+    .fandd-card {
+        background: linear-gradient(135deg, rgba(var(--color-warning-rgb), 0.05) 0%, rgba(var(--color-warning-rgb), 0.02) 100%);
+        border-color: rgba(var(--color-warning-rgb), 0.2);
+    }
+
+    .fandd-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .fandd-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 8px;
+        background: rgba(var(--color-warning-rgb), 0.08);
+        border-radius: 6px;
+        border: 1px solid rgba(var(--color-warning-rgb), 0.15);
+        font-size: 11px;
+    }
+
+    .fandd-name {
+        color: var(--color-warning);
+        font-weight: 500;
+        flex: 1;
+        margin-right: 8px;
+    }
+
+    .fandd-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .fandd-amount {
+        color: var(--color-success);
+        font-weight: 600;
+    }
+
+    .remove-fandd-btn {
+        background: var(--color-error);
+        color: var(--color-white);
+        border: none;
+        border-radius: 4px;
+        width: 18px;
+        height: 18px;
+        font-size: 10px;
+        font-weight: bold;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+    }
+
+    .remove-fandd-btn:hover {
+        background: #dc2626;
+        transform: scale(1.1);
+    }
+
+    .remove-fandd-btn:active {
+        transform: scale(0.95);
+    }
+
+    /* Enhanced Session Details Styling */
+    .session-details {
+        background: linear-gradient(135deg, rgba(var(--color-primary-rgb), 0.05) 0%, rgba(var(--color-primary-rgb), 0.02) 100%);
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin: 8px 0;
+        border: 1px solid rgba(var(--color-primary-rgb), 0.1);
+    }
+
+    .session-details p {
+        margin: 6px 0;
+        font-size: 13px;
+        color: var(--color-text);
+    }
+
+    .session-details p strong {
+        color: var(--color-primary);
+        font-weight: 600;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+        .data-card {
+            padding: 10px;
+        }
+
+        .segment-item,
+        .fandd-item {
+            font-size: 10px;
+            padding: 4px 6px;
+        }
     }
 
     /* Enhanced F&D Modal Styles */
@@ -3060,6 +3506,33 @@ require_once __DIR__ . '/../includes/header.php';
         font-size: 0.85em;
     }
 
+    .segment-detail {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 0;
+        border-bottom: 1px solid #eee;
+    }
+
+    .segment-detail:last-child {
+        border-bottom: none;
+    }
+
+    .segment-players {
+        font-weight: 500;
+        color: #333;
+    }
+
+    .segment-time {
+        color: #666;
+        font-family: monospace;
+    }
+
+    .segment-amount {
+        font-weight: 600;
+        color: #2c5aa0;
+    }
+
     .pause-history {
         margin: 15px 0;
         color: var(--color-text-secondary);
@@ -3521,3 +3994,38 @@ ading and Error States */
         }
     }
 </style>
+
+<script>
+    // Listen for topbar branch changes and filter consoles
+    window.addEventListener('branchChanged', function(event) {
+        console.log('Console mapping: Branch changed to:', event.detail);
+        const selectedBranchId = event.detail.branchId;
+
+        if (selectedBranchId) {
+            // Filter consoles by selected branch
+            loadConsoles(selectedBranchId);
+        } else {
+            // Show all consoles
+            loadConsoles();
+        }
+    });
+
+    // Ensure branch selection is restored on this page
+    document.addEventListener('DOMContentLoaded', function() {
+        // Wait for branches to load, then restore selection
+        setTimeout(function() {
+            if (typeof window.restoreBranchSelection === 'function') {
+                console.log('Console mapping page: Attempting branch restoration...');
+                window.restoreBranchSelection();
+            }
+
+            // Load consoles based on current topbar selection
+            const selectedBranchId = localStorage.getItem('selectedBranchId');
+            if (selectedBranchId) {
+                loadConsoles(selectedBranchId);
+            } else {
+                loadConsoles();
+            }
+        }, 1000);
+    });
+</script>

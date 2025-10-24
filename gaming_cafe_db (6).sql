@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 22, 2025 at 08:24 PM
+-- Generation Time: Oct 24, 2025 at 08:31 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -350,7 +350,83 @@ INSERT INTO `activity_logs` (`id`, `user_id`, `action`, `description`, `ip_addre
 (306, 3, 'login', 'User logged in', '::1', 1, '2025-10-22 18:15:55'),
 (307, 3, 'coupon_create', 'Created coupon: test', '::1', 1, '2025-10-22 18:20:04'),
 (308, 3, 'session_management', 'Session 76 ended and billing details generated for console 5.', NULL, 1, '2025-10-22 18:23:21'),
-(309, 3, 'session_management', 'Payment processed and session finalized for session 76. Method: cash, Amount: ₹243.00', NULL, 1, '2025-10-22 18:23:21');
+(309, 3, 'session_management', 'Payment processed and session finalized for session 76. Method: cash, Amount: ₹243.00', NULL, 1, '2025-10-22 18:23:21'),
+(310, 1, 'login', 'User logged in', '::1', 1, '2025-10-24 16:33:22'),
+(311, 3, 'login', 'User logged in', '::1', 1, '2025-10-24 16:34:04'),
+(312, 1, 'branch_delete', 'Deleted branch ID: 3', '::1', 1, '2025-10-24 16:35:48'),
+(313, 3, 'console_create', 'Created console: hello', '::1', 1, '2025-10-24 16:58:11'),
+(314, 1, 'user_create', 'Created user: manager2', '::1', 1, '2025-10-24 16:59:56'),
+(315, 3, 'logout', 'User logged out', '::1', 1, '2025-10-24 17:00:41'),
+(316, 4, 'login', 'User logged in', '::1', 1, '2025-10-24 17:00:47'),
+(317, 3, 'login', 'User logged in', '::1', 1, '2025-10-24 17:06:45'),
+(318, 3, 'session_management', 'Started gaming session for a on console hello', NULL, 1, '2025-10-24 17:08:18'),
+(319, 4, 'session_management', 'Started gaming session for ad on console xfcgfq', NULL, 1, '2025-10-24 17:08:43'),
+(320, 4, 'session_management', 'Session 78 ended and billing details generated for console 2.', NULL, 1, '2025-10-24 17:08:58'),
+(321, 4, 'session_management', 'Payment processed and session finalized for session 78. Method: cash, Amount: ₹35.00', NULL, 1, '2025-10-24 17:08:58'),
+(322, 4, 'session_management', 'Started gaming session for a on console xfcgfq', NULL, 1, '2025-10-24 17:13:13'),
+(323, 1, 'session_management', 'Session 77 ended and billing details generated for console 6.', NULL, 1, '2025-10-24 17:13:30'),
+(324, 1, 'session_management', 'Payment processed and session finalized for session 77. Method: cash, Amount: ₹35.00', NULL, 1, '2025-10-24 17:13:30'),
+(325, 4, 'session_management', 'Session 79 ended and billing details generated for console 2.', NULL, 1, '2025-10-24 17:13:48'),
+(326, 4, 'session_management', 'Payment processed and session finalized for session 79. Method: cash, Amount: ₹35.00', NULL, 1, '2025-10-24 17:13:48'),
+(327, 3, 'session_management', 'Started gaming session for e on console hello', NULL, 1, '2025-10-24 17:14:15'),
+(328, 3, 'session_management', 'Changed player count from 1 to 2 on console 6', NULL, 1, '2025-10-24 17:14:24'),
+(329, 3, 'session_management', 'Changed player count from 2 to 3 on console 6', NULL, 1, '2025-10-24 17:14:31'),
+(330, 3, 'session_management', 'Changed player count from 3 to 4 on console 6', NULL, 1, '2025-10-24 17:15:20'),
+(331, 3, 'session_management', 'Added 3x azlan to session on console 6. Stock reduced by 3', NULL, 1, '2025-10-24 17:19:51'),
+(332, 3, 'session_management', 'Added 2x Coffee to session on console 6. Stock reduced by 2', NULL, 1, '2025-10-24 17:20:02'),
+(333, 3, 'session_management', 'Started gaming session for 1 on console test console', NULL, 1, '2025-10-24 17:22:48'),
+(334, 3, 'console_create', 'Created console: test', '::1', 1, '2025-10-24 17:24:07'),
+(335, 3, 'session_management', 'Added 1x azlan to session on console 6. Stock reduced by 1', NULL, 1, '2025-10-24 17:25:46'),
+(336, 3, 'session_management', 'Removed 3x azlan from session on console 6. Stock restored by 3', NULL, 1, '2025-10-24 17:26:43'),
+(337, 3, 'session_management', 'Removed 1x azlan from session on console 6. Stock restored by 1', NULL, 1, '2025-10-24 17:26:52'),
+(338, 3, 'session_management', 'Session 80 ended and billing details generated for console 6.', NULL, 1, '2025-10-24 17:32:55'),
+(339, 3, 'session_management', 'Payment processed and session finalized for session 80. Method: cash, Amount: ₹285.00', NULL, 1, '2025-10-24 17:32:55'),
+(340, 1, 'session_management', 'Started gaming session for ajju on console test', NULL, 1, '2025-10-24 17:33:46'),
+(341, 1, 'session_management', 'Paused gaming session on console 7 - Reason: Technical Issue', NULL, 1, '2025-10-24 17:33:55'),
+(342, 1, 'session_management', 'Resumed gaming session on console 7', NULL, 1, '2025-10-24 17:35:11'),
+(343, 1, 'session_management', 'Changed player count from 1 to 2 on console 7', NULL, 1, '2025-10-24 17:35:19'),
+(344, 1, 'session_management', 'Session 82 ended and billing details generated for console 7.', NULL, 1, '2025-10-24 17:35:31'),
+(345, 1, 'session_management', 'Payment processed and session finalized for session 82. Method: cash, Amount: ₹80.00', NULL, 1, '2025-10-24 17:35:31'),
+(346, 1, 'session_management', 'Paused gaming session on console 5 - Reason: Customer Break', NULL, 1, '2025-10-24 17:35:57'),
+(347, 1, 'session_management', 'Resumed gaming session on console 5', NULL, 1, '2025-10-24 17:36:00'),
+(348, 1, 'session_management', 'Session 81 ended and billing details generated for console 5.', NULL, 1, '2025-10-24 17:36:12'),
+(349, 1, 'session_management', 'Payment processed and session finalized for session 81. Method: cash, Amount: ₹30.00', NULL, 1, '2025-10-24 17:36:12'),
+(350, 1, 'session_management', 'Started gaming session for knk on console test', NULL, 1, '2025-10-24 17:37:34'),
+(351, 1, 'session_management', 'Started gaming session for j on console hello', NULL, 1, '2025-10-24 17:37:41'),
+(352, 1, 'session_management', 'Started gaming session for kj on console test console', NULL, 1, '2025-10-24 17:37:47'),
+(353, 1, 'session_management', 'Paused gaming session on console 7 - Reason: Bathroom Break', NULL, 1, '2025-10-24 17:37:58'),
+(354, 1, 'session_management', 'Resumed gaming session on console 7', NULL, 1, '2025-10-24 17:38:04'),
+(355, 1, 'session_management', 'Session 83 ended and billing details generated for console 7.', NULL, 1, '2025-10-24 17:38:15'),
+(356, 1, 'session_management', 'Payment processed and session finalized for session 83. Method: cash, Amount: ₹30.00', NULL, 1, '2025-10-24 17:38:15'),
+(357, 1, 'session_management', 'Changed player count from 1 to 2 on console 6', NULL, 1, '2025-10-24 17:43:07'),
+(358, 1, 'session_management', 'Changed player count from 2 to 3 on console 6', NULL, 1, '2025-10-24 17:43:13'),
+(359, 1, 'session_management', 'Session 84 ended and billing details generated for console 6.', NULL, 1, '2025-10-24 17:43:20'),
+(360, 1, 'session_management', 'Payment processed and session finalized for session 84. Method: cash, Amount: ₹150.00', NULL, 1, '2025-10-24 17:43:20'),
+(361, 1, 'session_management', 'Changed player count from 1 to 2 on console 5', NULL, 1, '2025-10-24 17:46:59'),
+(362, 1, 'session_management', 'Changed player count from 2 to 3 on console 5', NULL, 1, '2025-10-24 17:47:07'),
+(363, 1, 'session_management', 'Changed player count from 3 to 4 on console 5', NULL, 1, '2025-10-24 17:47:24'),
+(364, 1, 'session_management', 'Session 85 ended and billing details generated for console 5.', NULL, 1, '2025-10-24 17:47:38'),
+(365, 1, 'session_management', 'Payment processed and session finalized for session 85. Method: cash, Amount: ₹240.00', NULL, 1, '2025-10-24 17:47:38'),
+(366, 1, 'session_management', 'Started gaming session for ds on console test', NULL, 1, '2025-10-24 17:48:19'),
+(367, 1, 'session_management', 'Started gaming session for a on console hello', NULL, 1, '2025-10-24 17:48:25'),
+(368, 1, 'session_management', 'Started gaming session for a on console test console', NULL, 1, '2025-10-24 17:48:30'),
+(369, 1, 'session_management', 'Changed player count from 1 to 2 on console 7', NULL, 1, '2025-10-24 17:48:43'),
+(370, 1, 'session_management', 'Changed player count from 2 to 4 on console 7', NULL, 1, '2025-10-24 17:48:58'),
+(371, 4, 'session_management', 'Started gaming session for a on console xfcgfq', NULL, 1, '2025-10-24 17:50:23'),
+(372, 4, 'session_management', 'Session 89 ended and billing details generated for console 2.', NULL, 1, '2025-10-24 17:50:39'),
+(373, 4, 'session_management', 'Payment processed and session finalized for session 89. Method: cash, Amount: ₹30.00', NULL, 1, '2025-10-24 17:50:39'),
+(374, 3, 'session_management', 'Session 86 ended and billing details generated for console 7.', NULL, 1, '2025-10-24 17:51:41'),
+(375, 3, 'session_management', 'Payment processed and session finalized for session 86. Method: cash, Amount: ₹170.00', NULL, 1, '2025-10-24 17:51:41'),
+(376, 3, 'session_management', 'Added 1x Coffee to session on console 6. Stock reduced by 1', NULL, 1, '2025-10-24 18:21:30'),
+(377, 3, 'session_management', 'Paused gaming session on console 6 - Reason: Customer Break', NULL, 1, '2025-10-24 18:21:40'),
+(378, 4, 'session_management', 'Started gaming session for jjnj on console xfcgfq', NULL, 1, '2025-10-24 18:25:14'),
+(379, 4, 'session_management', 'Changed player count from 1 to 2 on console 2', NULL, 1, '2025-10-24 18:25:23'),
+(380, 4, 'session_management', 'Paused gaming session on console 2 - Reason: Phone Call', NULL, 1, '2025-10-24 18:25:31'),
+(381, 4, 'session_management', 'Resumed gaming session on console 2', NULL, 1, '2025-10-24 18:25:41'),
+(382, 4, 'session_management', 'Session 90 ended and billing details generated for console 2.', NULL, 1, '2025-10-24 18:25:53'),
+(383, 4, 'session_management', 'Payment processed and session finalized for session 90. Method: cash, Amount: ₹80.00', NULL, 1, '2025-10-24 18:25:53'),
+(384, 3, 'logout', 'User logged out', '::1', 1, '2025-10-24 18:27:18'),
+(385, 2, 'login', 'User logged in', '::1', 1, '2025-10-24 18:27:25');
 
 -- --------------------------------------------------------
 
@@ -379,9 +455,8 @@ CREATE TABLE `branches` (
 --
 
 INSERT INTO `branches` (`id`, `name`, `location`, `address`, `contact`, `manager_name`, `timing`, `console_count`, `established_year`, `status`, `created_at`, `updated_at`, `manager_id`) VALUES
-(1, 'Main Branch', 'Downtown', '123 Gaming Street, City Center', '+1234567890', 'John Manager', '10:00 AM - 12:00 AM', 10, 2023, 'Active', '2025-10-11 09:02:17', '2025-10-11 09:02:17', NULL),
-(2, 'mangalore branch', 'mangalore', 'address', '6361557581', 'manager', '10', 10, 2023, 'Active', '2025-10-22 15:21:34', '2025-10-22 16:13:47', 3),
-(3, 'test', 'test', 'test', '0987654321', 'manager', '10', 10, 2023, 'Active', '2025-10-22 16:14:27', '2025-10-22 16:14:40', 3);
+(1, 'Main Branch', 'Downtown', '123 Gaming Street, City Center', '+1234567890', 'muhammad azlan', '10:00 AM - 12:00 AM', 10, 2023, 'Active', '2025-10-11 09:02:17', '2025-10-24 17:01:14', 4),
+(2, 'mangalore branch', 'mangalore', 'address', '6361557581', 'manager', '10', 15, 2023, 'Active', '2025-10-22 15:21:34', '2025-10-24 16:51:46', 3);
 
 -- --------------------------------------------------------
 
@@ -411,8 +486,10 @@ CREATE TABLE `consoles` (
 --
 
 INSERT INTO `consoles` (`id`, `name`, `type`, `specifications`, `purchase_year`, `email`, `primary_user`, `location`, `has_plus_account`, `under_maintenance`, `status`, `branch_id`, `created_at`, `updated_at`) VALUES
-(2, 'xfcgfq', 'PC', 'RTX 4060, i5-12600K, 16GB RAM', 2025, 'muhammedazlan11@gmail.com', 'azlan', '0', 1, 0, 'Available', 1, '2025-10-11 11:41:01', '2025-10-22 18:21:06'),
-(5, 'test console', 'PC', 'gtx 3050', 2025, 'muhammedazlan11@gmail.com', 'azlan', '0', 1, 0, 'Available', 2, '2025-10-20 16:20:03', '2025-10-22 18:23:21');
+(2, 'xfcgfq', 'PC', 'RTX 4060, i5-12600K, 16GB RAM', 2025, 'muhammedazlan11@gmail.com', 'azlan', '0', 1, 0, 'Available', 1, '2025-10-11 11:41:01', '2025-10-24 18:25:53'),
+(5, 'test console', 'PC', 'gtx 3050', 2025, 'muhammedazlan11@gmail.com', 'azlan', '0', 1, 0, '', 2, '2025-10-20 16:20:03', '2025-10-24 17:48:30'),
+(6, 'hello', 'PS5', 'hg', 2025, 'mu@gmai.com', 'azan', '0', 1, 0, '', 2, '2025-10-24 16:58:11', '2025-10-24 17:48:25'),
+(7, 'test', 'PC', '80', 2025, 'm@gmai.com', 'azlan', '0', 1, 0, 'Available', 2, '2025-10-24 17:24:07', '2025-10-24 17:51:41');
 
 -- --------------------------------------------------------
 
@@ -489,8 +566,8 @@ INSERT INTO `food_and_drinks` (`id`, `name`, `price`, `stock`, `category`, `desc
 (10, 'Tea', 2.00, 15, 'beverages', 'Hot or iced tea', 1, NULL, '2025-10-11 12:16:36', '2025-10-20 16:44:03', 1),
 (11, 'Ice Cream', 4.99, 18, 'desserts', 'Creamy vanilla ice cream', 1, NULL, '2025-10-11 12:16:36', '2025-10-20 01:53:06', 1),
 (12, 'Hot Dog', 7.50, 22, 'meals', 'Classic hot dog with condiments', 1, NULL, '2025-10-11 12:16:36', '2025-10-11 12:16:36', 1),
-(13, 'Coffee', 20.00, 20, 'beverages', 'desc', 1, '', '2025-10-22 16:09:39', '2025-10-22 16:13:26', 2),
-(14, 'azlan', 10.00, 10, 'beverages', 'azlan', 1, '0', '2025-10-22 18:17:24', '2025-10-22 18:17:24', 2),
+(13, 'Coffee', 20.00, 17, 'beverages', 'desc', 1, '', '2025-10-22 16:09:39', '2025-10-24 18:21:30', 2),
+(14, 'azlan', 10.00, 10, 'beverages', 'azlan', 1, '0', '2025-10-22 18:17:24', '2025-10-24 17:26:52', 2),
 (15, 'Test Item', 10.50, 5, 'beverages', 'Test description', 1, '0', '2025-10-22 18:17:44', '2025-10-22 18:17:44', 1);
 
 -- --------------------------------------------------------
@@ -638,7 +715,21 @@ INSERT INTO `gaming_sessions` (`id`, `console_id`, `customer_name`, `customer_nu
 (73, 5, 'sq', '', 1, 'regular', '2025-10-21 21:30:40', '2025-10-22 20:52:00', 2160.00, 0.00, 'completed', '+05:30', NULL, 0, NULL, 84060, 'cash', NULL, 0.00, 2160.00, 'completed', '2025-10-22 20:52:00', 1, '2025-10-21 16:00:40', '2025-10-22 15:22:00'),
 (74, 5, 'ajju', '', 1, 'regular', '2025-10-22 21:04:45', '2025-10-22 21:04:52', 30.00, 0.00, 'completed', '+05:30', NULL, 0, NULL, 0, 'cash', NULL, 0.00, 30.00, 'completed', '2025-10-22 21:04:52', 1, '2025-10-22 15:34:45', '2025-10-22 15:34:52'),
 (75, 5, 'ajju', '', 1, 'regular', '2025-10-22 21:07:58', '2025-10-22 21:08:03', 30.00, 0.00, 'completed', '+05:30', NULL, 0, NULL, 0, 'cash', NULL, 0.00, 30.00, 'completed', '2025-10-22 21:08:03', 1, '2025-10-22 15:37:58', '2025-10-22 15:38:03'),
-(76, 5, 'azlanajju', '', 1, 'regular', '2025-10-22 21:47:24', '2025-10-22 23:53:21', 270.00, 0.00, 'completed', '+05:30', NULL, 0, NULL, 7560, 'cash', '1122', 27.00, 243.00, 'completed', '2025-10-22 23:53:21', 3, '2025-10-22 16:17:24', '2025-10-22 18:23:21');
+(76, 5, 'azlanajju', '', 1, 'regular', '2025-10-22 21:47:24', '2025-10-22 23:53:21', 270.00, 0.00, 'completed', '+05:30', NULL, 0, NULL, 7560, 'cash', '1122', 27.00, 243.00, 'completed', '2025-10-22 23:53:21', 3, '2025-10-22 16:17:24', '2025-10-22 18:23:21'),
+(77, 6, 'a', '', 1, 'regular', '2025-10-24 22:38:18', '2025-10-24 22:43:30', 35.00, 0.00, 'completed', '+05:30', NULL, 0, NULL, 300, 'cash', NULL, 0.00, 35.00, 'completed', '2025-10-24 22:43:30', 3, '2025-10-24 17:08:18', '2025-10-24 17:13:30'),
+(78, 2, 'ad', '', 1, 'regular', '2025-10-24 22:38:43', '2025-10-24 22:38:58', 35.00, 0.00, 'completed', '+05:30', NULL, 0, NULL, 0, 'cash', '1234', 0.00, 35.00, 'completed', '2025-10-24 22:38:58', 4, '2025-10-24 17:08:43', '2025-10-24 17:08:58'),
+(79, 2, 'a', '', 1, 'regular', '2025-10-24 22:43:13', '2025-10-24 22:43:48', 35.00, 0.00, 'completed', '+05:30', NULL, 0, NULL, 60, 'cash', NULL, 0.00, 35.00, 'completed', '2025-10-24 22:43:48', 4, '2025-10-24 17:13:13', '2025-10-24 17:13:48'),
+(80, 6, 'e', '', 4, 'regular', '2025-10-24 22:44:15', '2025-10-24 23:02:55', 330.00, 40.00, 'completed', '+05:30', NULL, 0, NULL, 1140, 'cash', NULL, 0.00, 285.00, 'completed', '2025-10-24 23:02:55', 3, '2025-10-24 17:14:15', '2025-10-24 17:32:55'),
+(81, 5, '1', '', 1, 'regular', '2025-10-24 22:52:48', '2025-10-24 23:06:12', 30.00, 0.00, 'completed', '+05:30', NULL, 3, '2025-10-24 23:06:00', 780, 'cash', NULL, 0.00, 30.00, 'completed', '2025-10-24 23:06:12', 3, '2025-10-24 17:22:48', '2025-10-24 17:36:12'),
+(82, 7, 'ajju', '', 2, 'regular', '2025-10-24 23:03:46', '2025-10-24 23:05:31', 80.00, 0.00, 'completed', '+05:30', NULL, 76, '2025-10-24 23:05:11', 60, 'cash', NULL, 0.00, 80.00, 'completed', '2025-10-24 23:05:31', 1, '2025-10-24 17:33:46', '2025-10-24 17:35:31'),
+(83, 7, 'knk', '', 1, 'regular', '2025-10-24 23:07:34', '2025-10-24 23:08:15', 30.00, 0.00, 'completed', '+05:30', NULL, 6, '2025-10-24 23:08:04', 60, 'cash', NULL, 0.00, 30.00, 'completed', '2025-10-24 23:08:15', 1, '2025-10-24 17:37:34', '2025-10-24 17:38:15'),
+(84, 6, 'j', '', 3, 'regular', '2025-10-24 23:07:41', '2025-10-24 23:13:20', 150.00, 0.00, 'completed', '+05:30', NULL, 0, NULL, 360, 'cash', NULL, 0.00, 150.00, 'completed', '2025-10-24 23:13:20', 1, '2025-10-24 17:37:41', '2025-10-24 17:43:20'),
+(85, 5, 'kj', '', 4, 'regular', '2025-10-24 23:07:47', '2025-10-24 23:17:38', 240.00, 0.00, 'completed', '+05:30', NULL, 0, NULL, 600, 'cash', NULL, 0.00, 240.00, 'completed', '2025-10-24 23:17:38', 1, '2025-10-24 17:37:47', '2025-10-24 17:47:38'),
+(86, 7, 'ds', '', 4, 'regular', '2025-10-24 23:18:19', '2025-10-24 23:21:41', 170.00, 0.00, 'completed', '+05:30', NULL, 0, NULL, 180, 'cash', NULL, 0.00, 170.00, 'completed', '2025-10-24 23:21:41', 1, '2025-10-24 17:48:19', '2025-10-24 17:51:41'),
+(87, 6, 'a', '', 1, 'regular', '2025-10-24 23:18:25', NULL, 0.00, 20.00, 'paused', '+05:30', '2025-10-24 23:51:40', 0, NULL, 0, NULL, NULL, 0.00, 0.00, 'pending', NULL, 1, '2025-10-24 17:48:25', '2025-10-24 18:21:40'),
+(88, 5, 'a', '', 1, 'regular', '2025-10-24 23:18:30', NULL, 0.00, 0.00, 'active', '+05:30', NULL, 0, NULL, 0, NULL, NULL, 0.00, 0.00, 'pending', NULL, 1, '2025-10-24 17:48:30', '2025-10-24 17:48:30'),
+(89, 2, 'a', '', 1, 'regular', '2025-10-24 23:20:23', '2025-10-24 23:20:39', 30.00, 0.00, 'completed', '+05:30', NULL, 0, NULL, 0, 'cash', NULL, 0.00, 30.00, 'completed', '2025-10-24 23:20:39', 4, '2025-10-24 17:50:23', '2025-10-24 17:50:39'),
+(90, 2, 'jjnj', '', 2, 'regular', '2025-10-24 23:55:14', '2025-10-24 23:55:53', 80.00, 0.00, 'completed', '+05:30', NULL, 10, '2025-10-24 23:55:41', 60, 'cash', NULL, 0.00, 80.00, 'completed', '2025-10-24 23:55:53', 4, '2025-10-24 18:25:14', '2025-10-24 18:25:53');
 
 -- --------------------------------------------------------
 
@@ -691,7 +782,7 @@ CREATE TABLE `pricing` (
 --
 
 INSERT INTO `pricing` (`id`, `rate_type`, `player_count`, `duration_15`, `duration_30`, `duration_45`, `duration_60`, `branch_id`, `updated_at`) VALUES
-(1, 'regular', 1, 30.00, 50.00, 70.00, 90.00, 1, '2025-10-11 09:02:17'),
+(1, 'regular', 1, 30.00, 52.00, 70.00, 90.00, 1, '2025-10-24 17:32:24'),
 (2, 'regular', 2, 50.00, 80.00, 110.00, 140.00, 1, '2025-10-11 09:02:17'),
 (3, 'regular', 3, 70.00, 110.00, 150.00, 190.00, 1, '2025-10-11 09:02:17'),
 (4, 'regular', 4, 90.00, 140.00, 190.00, 240.00, 1, '2025-10-11 09:02:17'),
@@ -769,7 +860,9 @@ INSERT INTO `session_items` (`id`, `session_id`, `item_name`, `quantity`, `unit_
 (28, 65, 'Tea', 10, 2.00, 20.00, 'food_drinks', 10, '2025-10-20 16:44:03'),
 (29, 66, 'Coca Cola', 4, 2.50, 10.00, 'food_drinks', 1, '2025-10-20 16:49:27'),
 (30, 67, 'Energy Drink', 7, 3.99, 27.93, 'food_drinks', 7, '2025-10-21 14:03:53'),
-(31, 71, 'Energy Drink', 3, 3.99, 11.97, 'food_drinks', 7, '2025-10-21 15:30:01');
+(31, 71, 'Energy Drink', 3, 3.99, 11.97, 'food_drinks', 7, '2025-10-21 15:30:01'),
+(33, 80, 'Coffee', 2, 20.00, 40.00, 'food_drinks', 13, '2025-10-24 17:20:02'),
+(35, 87, 'Coffee', 1, 20.00, 20.00, 'food_drinks', 13, '2025-10-24 18:21:30');
 
 -- --------------------------------------------------------
 
@@ -797,7 +890,12 @@ INSERT INTO `session_pauses` (`id`, `session_id`, `pause_start`, `pause_end`, `r
 (7, 68, '2025-10-21 20:44:34', '2025-10-21 20:45:40', 'Phone Call', 1),
 (8, 68, '2025-10-21 20:51:39', '2025-10-21 20:51:54', 'chor unnog poyre', 0),
 (9, 68, '2025-10-21 20:53:53', '2025-10-21 20:54:01', 'Technical Issue', 0),
-(10, 71, '2025-10-21 21:16:06', '2025-10-21 21:17:40', 'Technical Issue', 2);
+(10, 71, '2025-10-21 21:16:06', '2025-10-21 21:17:40', 'Technical Issue', 2),
+(11, 82, '2025-10-24 23:03:55', '2025-10-24 23:05:11', 'Technical Issue', 1),
+(12, 81, '2025-10-24 23:05:57', '2025-10-24 23:06:00', 'Customer Break', 0),
+(13, 83, '2025-10-24 23:07:58', '2025-10-24 23:08:04', 'Bathroom Break', 0),
+(14, 87, '2025-10-24 23:51:40', NULL, 'Customer Break', 0),
+(15, 90, '2025-10-24 23:55:31', '2025-10-24 23:55:41', 'Phone Call', 0);
 
 -- --------------------------------------------------------
 
@@ -841,7 +939,33 @@ INSERT INTO `session_segments` (`id`, `session_id`, `player_count`, `start_time`
 (19, 73, 1, '2025-10-21 21:30:40', '2025-10-22 20:52:00', 1401, 2160.00),
 (20, 74, 1, '2025-10-22 21:04:45', '2025-10-22 21:04:52', 0, 30.00),
 (21, 75, 1, '2025-10-22 21:07:58', '2025-10-22 21:08:03', 0, 30.00),
-(22, 76, 1, '2025-10-22 21:47:24', '2025-10-22 23:53:21', 125, 270.00);
+(22, 76, 1, '2025-10-22 21:47:24', '2025-10-22 23:53:21', 125, 270.00),
+(23, 77, 1, '2025-10-24 22:38:18', '2025-10-24 22:43:30', 5, 35.00),
+(24, 78, 1, '2025-10-24 22:38:43', '2025-10-24 22:38:58', 0, 35.00),
+(25, 79, 1, '2025-10-24 22:43:13', '2025-10-24 22:43:48', 0, 35.00),
+(26, 80, 1, '2025-10-24 22:44:15', '2025-10-24 22:44:24', 0, 35.00),
+(27, 80, 2, '2025-10-24 22:44:24', '2025-10-24 22:44:31', 0, 50.00),
+(28, 80, 3, '2025-10-24 22:44:31', '2025-10-24 22:45:20', 0, 70.00),
+(29, 80, 4, '2025-10-24 22:45:20', '2025-10-24 23:02:55', 17, 140.00),
+(30, 81, 1, '2025-10-24 22:52:48', '2025-10-24 23:06:12', 13, 30.00),
+(31, 82, 1, '2025-10-24 23:03:46', '2025-10-24 23:05:19', 1, 30.00),
+(32, 82, 2, '2025-10-24 23:05:19', '2025-10-24 23:05:31', 0, 50.00),
+(33, 83, 1, '2025-10-24 23:07:34', '2025-10-24 23:08:15', 0, 30.00),
+(34, 84, 1, '2025-10-24 23:07:41', '2025-10-24 23:13:07', 5, 30.00),
+(35, 85, 1, '2025-10-24 23:07:47', '2025-10-24 23:16:59', 9, 30.00),
+(36, 84, 2, '2025-10-24 23:13:07', '2025-10-24 23:13:13', 0, 50.00),
+(37, 84, 3, '2025-10-24 23:13:13', '2025-10-24 23:13:20', 0, 70.00),
+(38, 85, 2, '2025-10-24 23:16:59', '2025-10-24 23:17:07', 0, 50.00),
+(39, 85, 3, '2025-10-24 23:17:07', '2025-10-24 23:17:24', 0, 70.00),
+(40, 85, 4, '2025-10-24 23:17:24', '2025-10-24 23:17:38', 0, 90.00),
+(41, 86, 1, '2025-10-24 23:18:19', '2025-10-24 23:18:43', 0, 30.00),
+(42, 87, 1, '2025-10-24 23:18:25', NULL, 0, 0.00),
+(43, 88, 1, '2025-10-24 23:18:30', NULL, 0, 0.00),
+(44, 86, 2, '2025-10-24 23:18:43', '2025-10-24 23:18:58', 0, 50.00),
+(45, 86, 4, '2025-10-24 23:18:58', '2025-10-24 23:21:41', 2, 90.00),
+(46, 89, 1, '2025-10-24 23:20:23', '2025-10-24 23:20:39', 0, 30.00),
+(47, 90, 1, '2025-10-24 23:55:14', '2025-10-24 23:55:23', 0, 30.00),
+(48, 90, 2, '2025-10-24 23:55:23', '2025-10-24 23:55:53', 0, 50.00);
 
 -- --------------------------------------------------------
 
@@ -966,7 +1090,19 @@ INSERT INTO `transactions` (`id`, `session_id`, `customer_name`, `customer_numbe
 (69, 73, 'sq', '', 1, 'regular', '2025-10-21 21:30:40', '2025-10-22 20:52:00', 1401, 5, NULL, 1401, 2160.00, 0.00, 2160.00, 0.00, 0.00, 2160.00, 2160.00, 0.00, 'cash', '', '2025-10-22 20:52:00', NULL, NULL, '0000-00-00 00:00:00', 1, 1, '2025-10-22 15:22:00'),
 (70, 74, 'ajju', '', 1, 'regular', '2025-10-22 21:04:45', '2025-10-22 21:04:52', 0, 5, NULL, 0, 30.00, 0.00, 30.00, 0.00, 0.00, 30.00, 30.00, 0.00, 'cash', '', '2025-10-22 21:04:52', NULL, NULL, '0000-00-00 00:00:00', 1, 3, '2025-10-22 15:34:52'),
 (71, 75, 'ajju', '', 1, 'regular', '2025-10-22 21:07:58', '2025-10-22 21:08:03', 0, 5, NULL, 0, 30.00, 0.00, 30.00, 0.00, 0.00, 30.00, 30.00, 0.00, 'cash', '', '2025-10-22 21:08:03', NULL, NULL, '0000-00-00 00:00:00', 1, 2, '2025-10-22 15:38:03'),
-(72, 76, 'azlanajju', '', 1, 'regular', '2025-10-22 21:47:24', '2025-10-22 23:53:21', 126, 5, NULL, 126, 270.00, 0.00, 270.00, 0.00, 0.00, 270.00, 243.00, 27.00, 'cash', '', '2025-10-22 23:53:21', NULL, '1122', '0000-00-00 00:00:00', 3, 2, '2025-10-22 18:23:21');
+(72, 76, 'azlanajju', '', 1, 'regular', '2025-10-22 21:47:24', '2025-10-22 23:53:21', 126, 5, NULL, 126, 270.00, 0.00, 270.00, 0.00, 0.00, 270.00, 243.00, 27.00, 'cash', '', '2025-10-22 23:53:21', NULL, '1122', '0000-00-00 00:00:00', 3, 2, '2025-10-22 18:23:21'),
+(73, 78, 'ad', '', 1, 'regular', '2025-10-24 22:38:43', '2025-10-24 22:38:58', 0, 2, NULL, 0, 35.00, 0.00, 35.00, 0.00, 0.00, 35.00, 35.00, 0.00, 'cash', '', '2025-10-24 22:38:58', NULL, '1234', '0000-00-00 00:00:00', 4, 1, '2025-10-24 17:08:58'),
+(74, 77, 'a', '', 1, 'regular', '2025-10-24 22:38:18', '2025-10-24 22:43:30', 5, 6, NULL, 5, 35.00, 0.00, 35.00, 0.00, 0.00, 35.00, 35.00, 0.00, 'cash', '', '2025-10-24 22:43:30', NULL, NULL, '0000-00-00 00:00:00', 1, 2, '2025-10-24 17:13:30'),
+(75, 79, 'a', '', 1, 'regular', '2025-10-24 22:43:13', '2025-10-24 22:43:48', 1, 2, NULL, 1, 35.00, 0.00, 35.00, 0.00, 0.00, 35.00, 35.00, 0.00, 'cash', '', '2025-10-24 22:43:48', NULL, NULL, '0000-00-00 00:00:00', 4, 1, '2025-10-24 17:13:48'),
+(76, 80, 'e', '', 4, 'regular', '2025-10-24 22:44:15', '2025-10-24 23:02:55', 19, 6, NULL, 19, 245.00, 40.00, 285.00, 0.00, 0.00, 285.00, 285.00, 0.00, 'cash', '', '2025-10-24 23:02:55', NULL, NULL, '0000-00-00 00:00:00', 3, 2, '2025-10-24 17:32:55'),
+(77, 82, 'ajju', '', 2, 'regular', '2025-10-24 23:03:46', '2025-10-24 23:05:31', 1, 7, NULL, 1, 80.00, 0.00, 80.00, 0.00, 0.00, 80.00, 80.00, 0.00, 'cash', '', '2025-10-24 23:05:31', NULL, NULL, '0000-00-00 00:00:00', 1, 2, '2025-10-24 17:35:31'),
+(78, 81, '1', '', 1, 'regular', '2025-10-24 22:52:48', '2025-10-24 23:06:12', 13, 5, NULL, 13, 30.00, 0.00, 30.00, 0.00, 0.00, 30.00, 30.00, 0.00, 'cash', '', '2025-10-24 23:06:12', NULL, NULL, '0000-00-00 00:00:00', 1, 2, '2025-10-24 17:36:12'),
+(79, 83, 'knk', '', 1, 'regular', '2025-10-24 23:07:34', '2025-10-24 23:08:15', 1, 7, NULL, 1, 30.00, 0.00, 30.00, 0.00, 0.00, 30.00, 30.00, 0.00, 'cash', '', '2025-10-24 23:08:15', NULL, NULL, '0000-00-00 00:00:00', 1, 2, '2025-10-24 17:38:15'),
+(80, 84, 'j', '', 3, 'regular', '2025-10-24 23:07:41', '2025-10-24 23:13:20', 6, 6, NULL, 6, 150.00, 0.00, 150.00, 0.00, 0.00, 150.00, 150.00, 0.00, 'cash', '', '2025-10-24 23:13:20', NULL, NULL, '0000-00-00 00:00:00', 1, 2, '2025-10-24 17:43:20'),
+(81, 85, 'kj', '', 4, 'regular', '2025-10-24 23:07:47', '2025-10-24 23:17:38', 10, 5, NULL, 10, 240.00, 0.00, 240.00, 0.00, 0.00, 240.00, 240.00, 0.00, 'cash', '', '2025-10-24 23:17:38', NULL, NULL, '0000-00-00 00:00:00', 1, 2, '2025-10-24 17:47:38'),
+(82, 89, 'a', '', 1, 'regular', '2025-10-24 23:20:23', '2025-10-24 23:20:39', 0, 2, NULL, 0, 30.00, 0.00, 30.00, 0.00, 0.00, 30.00, 30.00, 0.00, 'cash', '', '2025-10-24 23:20:39', NULL, NULL, '0000-00-00 00:00:00', 4, 1, '2025-10-24 17:50:39'),
+(83, 86, 'ds', '', 4, 'regular', '2025-10-24 23:18:19', '2025-10-24 23:21:41', 3, 7, NULL, 3, 170.00, 0.00, 170.00, 0.00, 0.00, 170.00, 170.00, 0.00, 'cash', '', '2025-10-24 23:21:41', NULL, NULL, '0000-00-00 00:00:00', 3, 2, '2025-10-24 17:51:41'),
+(84, 90, 'jjnj', '', 2, 'regular', '2025-10-24 23:55:14', '2025-10-24 23:55:53', 1, 2, NULL, 1, 80.00, 0.00, 80.00, 0.00, 0.00, 80.00, 80.00, 0.00, 'cash', '', '2025-10-24 23:55:53', NULL, NULL, '0000-00-00 00:00:00', 4, 1, '2025-10-24 18:25:53');
 
 -- --------------------------------------------------------
 
@@ -1012,7 +1148,8 @@ CREATE TABLE `users` (
 INSERT INTO `users` (`id`, `full_name`, `username`, `email`, `phone`, `password`, `role`, `branch_id`, `status`, `created_at`, `updated_at`) VALUES
 (1, 'System Administrator', 'admin', 'admin@gamebot.com', '1234567890', '$2y$10$.O3ZrRfBqTyzZVxqOmw8Ke0.ChN22Z.HK.RMjWLG6ZJPDiyjSAhbq', 'Admin', 1, 'Active', '2025-10-11 09:02:17', '2025-10-22 15:24:27'),
 (2, 'staff', 'staff', 'staff@gmail.com', '0987654', '$2y$10$zvTuKoLj3YLzmTljiG16IuF6XQMVHWmrI.26KmXqOyfftqfG/g8VW', 'Staff', 1, 'Active', '2025-10-14 17:40:09', '2025-10-14 17:40:18'),
-(3, 'manager', 'manager', 'manager@gmail.com', '6361557581', '$2y$10$46irQUAswHQziqb5sLUG4.nSGGBq4H4l3hj4Y.Az2hGlqpGVyPax.', 'Manager', 2, 'Active', '2025-10-22 15:11:37', '2025-10-22 18:15:35');
+(3, 'manager', 'manager', 'manager@gmail.com', '6361557581', '$2y$10$46irQUAswHQziqb5sLUG4.nSGGBq4H4l3hj4Y.Az2hGlqpGVyPax.', 'Manager', 2, 'Active', '2025-10-22 15:11:37', '2025-10-22 18:15:35'),
+(4, 'muhammad azlan', 'manager2', 'muhammedazlan@gmail.com', '06361557581', '$2y$10$zTWndoXYdRUb/02MwXfnz.Hu/bjLCSj9KYy5T1o.30A6tOuLPwAMO', 'Manager', 1, 'Active', '2025-10-24 16:59:56', '2025-10-24 16:59:56');
 
 --
 -- Indexes for dumped tables
@@ -1162,7 +1299,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `activity_logs`
 --
 ALTER TABLE `activity_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=310;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=386;
 
 --
 -- AUTO_INCREMENT for table `branches`
@@ -1174,7 +1311,7 @@ ALTER TABLE `branches`
 -- AUTO_INCREMENT for table `consoles`
 --
 ALTER TABLE `consoles`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `coupons`
@@ -1204,7 +1341,7 @@ ALTER TABLE `game_console_assignments`
 -- AUTO_INCREMENT for table `gaming_sessions`
 --
 ALTER TABLE `gaming_sessions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=77;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=91;
 
 --
 -- AUTO_INCREMENT for table `inventory`
@@ -1228,19 +1365,19 @@ ALTER TABLE `sessions`
 -- AUTO_INCREMENT for table `session_items`
 --
 ALTER TABLE `session_items`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
 
 --
 -- AUTO_INCREMENT for table `session_pauses`
 --
 ALTER TABLE `session_pauses`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `session_segments`
 --
 ALTER TABLE `session_segments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=49;
 
 --
 -- AUTO_INCREMENT for table `settings`
@@ -1252,7 +1389,7 @@ ALTER TABLE `settings`
 -- AUTO_INCREMENT for table `transactions`
 --
 ALTER TABLE `transactions`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=73;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=85;
 
 --
 -- AUTO_INCREMENT for table `transaction_items`
@@ -1264,7 +1401,7 @@ ALTER TABLE `transaction_items`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- Constraints for dumped tables

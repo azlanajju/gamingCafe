@@ -20,6 +20,8 @@ try {
                 // Check if user is a manager and should be restricted to their branch
                 $userBranchId = Auth::userBranchId();
                 $isManagerRestricted = Auth::isManagerRestricted();
+                $currentUserId = Auth::userId();
+                $userRole = Auth::userRole();
 
                 $where_conditions = [];
                 $params = [];
@@ -85,6 +87,9 @@ try {
                     {$where_clause}
                     ORDER BY c.id DESC
                 ");
+
+                // Note: Data isolation is not applied to consoles as they don't have created_by field
+                // Session data isolation is handled in the session management APIs
 
                 if (!empty($params)) {
                     $stmt->bind_param($param_types, ...$params);

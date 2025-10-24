@@ -19,6 +19,10 @@ try {
                 $paymentMethod = $_GET['payment_method'] ?? null;
                 $branchId = $_GET['branch_id'] ?? null;
 
+                // Get current user info for data isolation
+                $currentUserId = Auth::userId();
+                $userRole = Auth::userRole();
+
                 $query = "SELECT t.*, u.full_name as user_name, c.name as console_name, b.name as branch_name, b.location as branch_location
                          FROM transactions t 
                          LEFT JOIN users u ON t.created_by = u.id 
@@ -26,8 +30,37 @@ try {
                          LEFT JOIN branches b ON t.branch_id = b.id
                          WHERE 1=1";
 
-                $params = [];
-                $types = "";
+                // Add data isolation for non-Admin users
+                if ($userRole !== 'Admin') {
+                    if ($userRole === 'Manager') {
+                        // For Managers: show transactions from their branch that are NOT created by Admins
+                        $query .= " AND t.branch_id = ? AND t.created_by NOT IN (SELECT id FROM users WHERE role = 'Admin')";
+                        $userBranchId = Auth::userBranchId();
+                        $params[] = $userBranchId;
+                        $types .= "i";
+                    } else {
+                        // For Staff: show only transactions they created
+                        $query .= " AND t.created_by = ?";
+                        $params[] = $currentUserId;
+                        $types .= "i";
+                    }
+                } else {
+                    // For Admins: if branch_id is specified, filter by it
+                    if ($branchId) {
+                        $query .= " AND t.branch_id = ?";
+                        $params[] = $branchId;
+                        $types .= "i";
+                    }
+                }
+
+                $params = $params ?? [];
+                $types = $types ?? "";
+
+                // Add debugging
+                error_log("Transactions API Query: " . $query);
+                error_log("Transactions API Params: " . json_encode($params));
+                error_log("Transactions API Types: " . $types);
+                error_log("Transactions API Branch ID: " . $branchId);
 
                 if ($startDate) {
                     $query .= " AND DATE(t.created_at) >= ?";

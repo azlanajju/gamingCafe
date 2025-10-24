@@ -15,20 +15,40 @@ try {
             if ($action === 'list') {
                 // Filter by status if provided, otherwise get all
                 $status = $_GET['status'] ?? '';
+                $selectedBranchId = $_GET['branch_id'] ?? null; // From topbar dropdown
 
                 // Check if user is a manager and should be restricted to their branch
                 $userBranchId = Auth::userBranchId();
                 $isManagerRestricted = Auth::isManagerRestricted();
+                $userRole = Auth::userRole();
+
+                // Determine which branch to filter by
+                $branchCondition = '';
+                $branchParams = [];
+                $branchParamTypes = '';
+
+                // Priority: Admin can select any branch via dropdown, Manager restricted to their branch
+                if ($userRole === 'Admin' && $selectedBranchId) {
+                    // Admin selected a specific branch from dropdown
+                    $branchCondition = " AND c.branch_id = ?";
+                    $branchParams[] = $selectedBranchId;
+                    $branchParamTypes = 'i';
+                } elseif ($isManagerRestricted && $userBranchId) {
+                    // Manager restricted to their branch
+                    $branchCondition = " AND c.branch_id = ?";
+                    $branchParams[] = $userBranchId;
+                    $branchParamTypes = 'i';
+                }
 
                 if ($status) {
                     $query = "SELECT c.*, b.name as branch_name, b.location as branch_location FROM coupons c LEFT JOIN branches b ON c.branch_id = b.id WHERE c.status = ?";
                     $params = [$status];
                     $param_types = 's';
 
-                    if ($isManagerRestricted && $userBranchId) {
-                        $query .= " AND c.branch_id = ?";
-                        $params[] = $userBranchId;
-                        $param_types .= 'i';
+                    if ($branchCondition) {
+                        $query .= $branchCondition;
+                        $params = array_merge($params, $branchParams);
+                        $param_types .= $branchParamTypes;
                     }
 
                     $query .= " ORDER BY c.id DESC";
@@ -37,16 +57,21 @@ try {
                 } else {
                     $query = "SELECT c.*, b.name as branch_name, b.location as branch_location FROM coupons c LEFT JOIN branches b ON c.branch_id = b.id";
 
-                    if ($isManagerRestricted && $userBranchId) {
-                        $query .= " WHERE c.branch_id = ?";
+                    if ($branchCondition) {
+                        $query .= " WHERE 1=1" . $branchCondition;
                         $query .= " ORDER BY c.id DESC";
                         $stmt = $db->prepare($query);
-                        $stmt->bind_param("i", $userBranchId);
+                        $stmt->bind_param($branchParamTypes, ...$branchParams);
                     } else {
                         $query .= " ORDER BY c.id DESC";
                         $stmt = $db->prepare($query);
                     }
                 }
+
+                // Add debugging
+                error_log("Coupons API Query: " . $query);
+                error_log("Coupons API Params: " . json_encode($branchParams));
+                error_log("Coupons API Types: " . $branchParamTypes);
                 $stmt->execute();
                 $result = $stmt->get_result();
                 $coupons = [];

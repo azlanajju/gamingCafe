@@ -113,7 +113,7 @@ require_once __DIR__ . '/../includes/header.php';
         </section>
     <?php endif; ?>
 
-    <?php if (Auth::hasRole('Admin') || Auth::hasRole('Manager')): ?>
+    <?php if (Auth::hasRole('Admin')): ?>
         <section>
             <div class="card activity-log-card">
                 <h3>Activity Logs</h3>
@@ -132,7 +132,16 @@ require_once __DIR__ . '/../includes/header.php';
 
     // Load dashboard data
     function loadDashboardStats() {
-        fetch(`${SITE_URL}/api/dashboard.php?action=stats&period=${currentDashboardPeriod}`)
+        // Get selected branch from localStorage
+        const selectedBranchId = localStorage.getItem('selectedBranchId') || '';
+        let url = `${SITE_URL}/api/dashboard.php?action=stats&period=${currentDashboardPeriod}`;
+
+        // Add branch filter if a specific branch is selected
+        if (selectedBranchId && USER_ROLE === 'Admin') {
+            url += `&branch_id=${selectedBranchId}`;
+        }
+
+        fetch(url)
             .then(res => res.json())
             .then(result => {
                 if (result.success) {
@@ -167,7 +176,16 @@ require_once __DIR__ . '/../includes/header.php';
 
     // Load charts
     function loadCharts() {
-        fetch(`${SITE_URL}/api/dashboard.php?action=charts&period=${currentDashboardPeriod}`)
+        // Get selected branch from localStorage
+        const selectedBranchId = localStorage.getItem('selectedBranchId') || '';
+        let url = `${SITE_URL}/api/dashboard.php?action=charts&period=${currentDashboardPeriod}`;
+
+        // Add branch filter if a specific branch is selected
+        if (selectedBranchId && USER_ROLE === 'Admin') {
+            url += `&branch_id=${selectedBranchId}`;
+        }
+
+        fetch(url)
             .then(res => res.json())
             .then(result => {
                 if (result.success) {
@@ -410,8 +428,8 @@ require_once __DIR__ . '/../includes/header.php';
 
     // Load activity logs
     function loadActivityLogs() {
-        // Only load activity logs for Admin/Manager
-        if (USER_ROLE !== 'Admin' && USER_ROLE !== 'Manager') {
+        // Only load activity logs for Admin
+        if (USER_ROLE !== 'Admin') {
             return;
         }
 
@@ -434,6 +452,14 @@ require_once __DIR__ . '/../includes/header.php';
             })
             .catch(err => console.error('Error loading logs:', err));
     }
+
+    // Listen for branch changes
+    window.addEventListener('branchChanged', function(event) {
+        console.log('Branch changed to:', event.detail);
+        // Reload dashboard data with new branch
+        loadDashboardStats();
+        loadCharts();
+    });
 
     // Initial load (today's data only)
     loadDashboardStats();

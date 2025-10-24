@@ -130,6 +130,11 @@ class SessionManager
                         return $this->getSessionSegmentsApi();
                     }
                     break;
+                case 'get_session_fandd':
+                    if ($method === 'GET') {
+                        return $this->getSessionFandDApi();
+                    }
+                    break;
                 case 'process_payment':
                     if ($method === 'POST') {
                         return $this->processPayment();
@@ -1332,7 +1337,7 @@ class SessionManager
     private function getSessionFandDItems($session_id)
     {
         $stmt = $this->db->prepare("
-            SELECT item_name as name, quantity, unit_price, total_price 
+            SELECT id, item_name as name, quantity, unit_price, total_price 
             FROM session_items 
             WHERE session_id = ?
         ");
@@ -1358,6 +1363,17 @@ class SessionManager
         $stmt->bind_param("i", $session_id);
         $stmt->execute();
         return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
+    private function getSessionFandDApi()
+    {
+        $session_id = $_GET['session_id'] ?? null;
+
+        if (!$session_id) {
+            return ['success' => false, 'message' => 'Session ID is required'];
+        }
+
+        return ['success' => true, 'data' => $this->getSessionFandDItems($session_id)];
     }
 
     private function getTaxRate()

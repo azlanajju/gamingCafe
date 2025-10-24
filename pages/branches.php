@@ -98,7 +98,7 @@ if (!Auth::hasRole('Admin')) {
     }
 
     // Load branches
-    function loadBranches() {
+    function loadBranchList() {
         fetch(`${SITE_URL}/api/branches.php?action=list`)
             .then(res => res.json())
             .then(result => {
@@ -188,7 +188,7 @@ if (!Auth::hasRole('Admin')) {
                 if (result.success) {
                     alert(result.message);
                     document.getElementById('branch-modal').classList.add('hidden');
-                    loadBranches();
+                    loadBranchList();
                 } else {
                     alert('Error: ' + result.message);
                 }
@@ -197,27 +197,31 @@ if (!Auth::hasRole('Admin')) {
 
     // Edit branch
     function editBranch(id) {
-        fetch(`${SITE_URL}/api/branches.php?action=list`)
+        fetch(`${SITE_URL}/api/branches.php?action=get&id=${id}`)
             .then(res => res.json())
             .then(result => {
                 if (result.success) {
-                    const branch = result.data.find(b => b.id == id);
-                    if (branch) {
-                        document.getElementById('branch-modal-title').textContent = 'Edit Branch';
-                        document.getElementById('branch-id').value = branch.id;
-                        document.getElementById('branch-name').value = branch.name;
-                        document.getElementById('branch-location').value = branch.location;
-                        document.getElementById('branch-address').value = branch.address;
-                        document.getElementById('branch-contact').value = branch.contact;
-                        document.getElementById('branch-manager').value = branch.manager_name;
-                        document.getElementById('branch-manager-select').value = branch.manager_id || '';
-                        document.getElementById('branch-timing').value = branch.timing;
-                        document.getElementById('branch-console').value = branch.console_count;
-                        document.getElementById('branch-established').value = branch.established_year;
-                        document.getElementById('branch-active').checked = branch.status === 'Active';
-                        document.getElementById('branch-modal').classList.remove('hidden');
-                    }
+                    const branch = result.data;
+                    document.getElementById('branch-modal-title').textContent = 'Edit Branch';
+                    document.getElementById('branch-id').value = branch.id;
+                    document.getElementById('branch-name').value = branch.name;
+                    document.getElementById('branch-location').value = branch.location;
+                    document.getElementById('branch-address').value = branch.address;
+                    document.getElementById('branch-contact').value = branch.contact;
+                    document.getElementById('branch-manager').value = branch.manager_name;
+                    document.getElementById('branch-manager-select').value = branch.manager_id || '';
+                    document.getElementById('branch-timing').value = branch.timing;
+                    document.getElementById('branch-console').value = branch.console_count;
+                    document.getElementById('branch-established').value = branch.established_year;
+                    document.getElementById('branch-active').checked = branch.status === 'Active';
+                    document.getElementById('branch-modal').classList.remove('hidden');
+                } else {
+                    alert('Error: ' + result.message);
                 }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error loading branch data');
             });
     }
 
@@ -231,7 +235,7 @@ if (!Auth::hasRole('Admin')) {
                 .then(result => {
                     if (result.success) {
                         alert(result.message);
-                        loadBranches();
+                        loadBranchList();
                     } else {
                         alert('Error: ' + result.message);
                     }
@@ -242,6 +246,69 @@ if (!Auth::hasRole('Admin')) {
     // Initial load
     loadManagers();
     loadBranches();
+
+    // Listen for topbar branch changes and filter branches
+    window.addEventListener('branchChanged', function(event) {
+        console.log('Branches: Branch changed to:', event.detail);
+        const selectedBranchId = event.detail.branchId;
+
+        if (selectedBranchId) {
+            // Filter branches by selected branch (show only that branch)
+            loadBranchList();
+            // Highlight the selected branch
+            setTimeout(() => {
+                const branchCards = document.querySelectorAll('.branch-card');
+                branchCards.forEach(card => {
+                    const branchId = card.dataset.branchId;
+                    if (branchId === selectedBranchId) {
+                        card.style.border = '2px solid var(--color-primary)';
+                        card.style.backgroundColor = 'rgba(var(--color-primary-rgb), 0.1)';
+                    } else {
+                        card.style.border = '1px solid var(--color-border)';
+                        card.style.backgroundColor = 'var(--color-surface)';
+                    }
+                });
+            }, 500);
+        } else {
+            // Show all branches
+            loadBranchList();
+            // Reset all branch cards
+            setTimeout(() => {
+                const branchCards = document.querySelectorAll('.branch-card');
+                branchCards.forEach(card => {
+                    card.style.border = '1px solid var(--color-border)';
+                    card.style.backgroundColor = 'var(--color-surface)';
+                });
+            }, 500);
+        }
+    });
+
+    // Ensure branch selection is restored on this page
+    document.addEventListener('DOMContentLoaded', function() {
+        // Wait for branches to load, then restore selection
+        setTimeout(function() {
+            if (typeof window.restoreBranchSelection === 'function') {
+                console.log('Branches page: Attempting branch restoration...');
+                window.restoreBranchSelection();
+            }
+
+            // Load branches and highlight selected one
+            loadBranchList();
+            const selectedBranchId = localStorage.getItem('selectedBranchId');
+            if (selectedBranchId) {
+                setTimeout(() => {
+                    const branchCards = document.querySelectorAll('.branch-card');
+                    branchCards.forEach(card => {
+                        const branchId = card.dataset.branchId;
+                        if (branchId === selectedBranchId) {
+                            card.style.border = '2px solid var(--color-primary)';
+                            card.style.backgroundColor = 'rgba(var(--color-primary-rgb), 0.1)';
+                        }
+                    });
+                }, 500);
+            }
+        }, 1000);
+    });
 </script>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

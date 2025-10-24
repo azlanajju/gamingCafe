@@ -25,6 +25,15 @@ class Auth
         return $_SESSION['user_branch_id'] ?? null;
     }
 
+    // Get current user's role
+    public static function userRole()
+    {
+        if (!self::check()) {
+            return null;
+        }
+        return $_SESSION['user_role'] ?? null;
+    }
+
     // Get current user data
     public static function user()
     {

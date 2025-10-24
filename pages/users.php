@@ -97,7 +97,7 @@ if (!Auth::hasRole('Admin')) {
 
 <script>
     // Load branches
-    function loadBranches() {
+    function loadUserBranches() {
         fetch(`${SITE_URL}/api/users.php?action=branches`)
             .then(res => res.json())
             .then(result => {
@@ -249,8 +249,41 @@ if (!Auth::hasRole('Admin')) {
     }
 
     // Initial load
-    loadBranches();
+    loadUserBranches();
     loadUsers();
+
+    // Listen for topbar branch changes and filter users
+    window.addEventListener('branchChanged', function(event) {
+        console.log('Users: Branch changed to:', event.detail);
+        const selectedBranchId = event.detail.branchId;
+
+        if (selectedBranchId) {
+            // Filter users by selected branch
+            loadUsers(selectedBranchId);
+        } else {
+            // Show all users
+            loadUsers();
+        }
+    });
+
+    // Ensure branch selection is restored on this page
+    document.addEventListener('DOMContentLoaded', function() {
+        // Wait for branches to load, then restore selection
+        setTimeout(function() {
+            if (typeof window.restoreBranchSelection === 'function') {
+                console.log('Users page: Attempting branch restoration...');
+                window.restoreBranchSelection();
+            }
+
+            // Load users based on current topbar selection
+            const selectedBranchId = localStorage.getItem('selectedBranchId');
+            if (selectedBranchId) {
+                loadUsers(selectedBranchId);
+            } else {
+                loadUsers();
+            }
+        }, 1000);
+    });
 </script>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

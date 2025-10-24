@@ -90,7 +90,7 @@ require_once __DIR__ . '/../includes/header.php';
 
 <script>
     // Load branches
-    function loadBranches() {
+    function loadFanddBranches() {
         fetch(`${SITE_URL}/api/fandd.php?action=branches`)
             .then(res => res.json())
             .then(result => {
@@ -319,7 +319,7 @@ require_once __DIR__ . '/../includes/header.php';
     }
 
     // Initial load
-    loadBranches();
+    loadFanddBranches();
 
     // For Managers and Staff, automatically filter by their branch
     <?php if (Auth::isManagerRestricted()): ?>
@@ -725,5 +725,40 @@ require_once __DIR__ . '/../includes/header.php';
         }
     }
 </style>
+
+<script>
+    // Listen for topbar branch changes and filter F&D items
+    window.addEventListener('branchChanged', function(event) {
+        console.log('F&D management: Branch changed to:', event.detail);
+        const selectedBranchId = event.detail.branchId;
+
+        if (selectedBranchId) {
+            // Filter F&D items by selected branch
+            loadItems('', selectedBranchId);
+        } else {
+            // Show all F&D items
+            loadItems('', '');
+        }
+    });
+
+    // Ensure branch selection is restored on this page
+    document.addEventListener('DOMContentLoaded', function() {
+        // Wait for branches to load, then restore selection
+        setTimeout(function() {
+            if (typeof window.restoreBranchSelection === 'function') {
+                console.log('F&D management page: Attempting branch restoration...');
+                window.restoreBranchSelection();
+            }
+
+            // Load F&D items based on current topbar selection
+            const selectedBranchId = localStorage.getItem('selectedBranchId');
+            if (selectedBranchId) {
+                loadItems('', selectedBranchId);
+            } else {
+                loadItems('', '');
+            }
+        }, 1000);
+    });
+</script>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>

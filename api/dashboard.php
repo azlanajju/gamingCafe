@@ -13,19 +13,37 @@ try {
     if ($method === 'GET') {
         if ($action === 'stats') {
             $period = $_GET['period'] ?? 'daily'; // daily, monthly, yearly
+            $selectedBranchId = $_GET['branch_id'] ?? null; // From topbar dropdown
 
             // Check if user is a manager and should be restricted to their branch
             $userBranchId = Auth::userBranchId();
             $isManagerRestricted = Auth::isManagerRestricted();
+            $currentUserId = Auth::userId();
+            $userRole = Auth::userRole();
 
             $branchCondition = '';
             $branchParams = [];
             $branchParamTypes = '';
 
-            if ($isManagerRestricted && $userBranchId) {
+            // Priority: Admin can select any branch via dropdown, Manager restricted to their branch
+            if ($userRole === 'Admin' && $selectedBranchId) {
+                // Admin selected a specific branch from dropdown
+                $branchCondition = " AND branch_id = ?";
+                $branchParams[] = $selectedBranchId;
+                $branchParamTypes = 'i';
+            } elseif ($isManagerRestricted && $userBranchId) {
+                // Manager restricted to their branch
                 $branchCondition = " AND branch_id = ?";
                 $branchParams[] = $userBranchId;
                 $branchParamTypes = 'i';
+            }
+
+            // Add data isolation for non-Admin users
+            $dataIsolationCondition = '';
+            if ($userRole !== 'Admin') {
+                $dataIsolationCondition = " AND created_by = ?";
+                $branchParams[] = $currentUserId;
+                $branchParamTypes .= 'i';
             }
 
             $dateCondition = "DATE(created_at) = CURDATE()";
@@ -44,7 +62,7 @@ try {
                 COUNT(DISTINCT customer_name) as total_customers,
                 COUNT(*) as total_transactions
             FROM transactions 
-            WHERE $dateCondition $branchCondition");
+            WHERE $dateCondition $branchCondition $dataIsolationCondition");
 
             if (!empty($branchParams)) {
                 $revenueStmt->bind_param($branchParamTypes, ...$branchParams);
@@ -56,12 +74,14 @@ try {
             $consoleQuery = "SELECT COUNT(*) as active_consoles FROM gaming_sessions gs 
                             LEFT JOIN consoles c ON gs.console_id = c.id 
                             WHERE gs.status IN ('active', 'paused')";
-            if ($isManagerRestricted && $userBranchId) {
+            if (($userRole === 'Admin' && $selectedBranchId) || ($isManagerRestricted && $userBranchId)) {
+                $branchIdToUse = ($userRole === 'Admin' && $selectedBranchId) ? $selectedBranchId : $userBranchId;
                 $consoleQuery .= " AND c.branch_id = ?";
             }
             $consoleStmt = $db->prepare($consoleQuery);
-            if ($isManagerRestricted && $userBranchId) {
-                $consoleStmt->bind_param("i", $userBranchId);
+            if (($userRole === 'Admin' && $selectedBranchId) || ($isManagerRestricted && $userBranchId)) {
+                $branchIdToUse = ($userRole === 'Admin' && $selectedBranchId) ? $selectedBranchId : $userBranchId;
+                $consoleStmt->bind_param("i", $branchIdToUse);
             }
             $consoleStmt->execute();
             $consoleStats = $consoleStmt->get_result()->fetch_assoc();
@@ -72,7 +92,7 @@ try {
             $sessionStats = $sessionStmt->get_result()->fetch_assoc();
 
             // Get peak hours (hour with most transactions)
-            $peakQuery = "SELECT HOUR(created_at) as hour, COUNT(*) as count FROM transactions WHERE $dateCondition $branchCondition GROUP BY HOUR(created_at) ORDER BY count DESC LIMIT 1";
+            $peakQuery = "SELECT HOUR(created_at) as hour, COUNT(*) as count FROM transactions WHERE $dateCondition $branchCondition $dataIsolationCondition GROUP BY HOUR(created_at) ORDER BY count DESC LIMIT 1";
             $peakStmt = $db->prepare($peakQuery);
             if (!empty($branchParams)) {
                 $peakStmt->bind_param($branchParamTypes, ...$branchParams);
@@ -82,12 +102,14 @@ try {
 
             // Calculate utilization percentage
             $totalConsolesQuery = "SELECT COUNT(*) as total FROM consoles WHERE status != 'Maintenance'";
-            if ($isManagerRestricted && $userBranchId) {
+            if (($userRole === 'Admin' && $selectedBranchId) || ($isManagerRestricted && $userBranchId)) {
+                $branchIdToUse = ($userRole === 'Admin' && $selectedBranchId) ? $selectedBranchId : $userBranchId;
                 $totalConsolesQuery .= " AND branch_id = ?";
             }
             $totalConsolesStmt = $db->prepare($totalConsolesQuery);
-            if ($isManagerRestricted && $userBranchId) {
-                $totalConsolesStmt->bind_param("i", $userBranchId);
+            if (($userRole === 'Admin' && $selectedBranchId) || ($isManagerRestricted && $userBranchId)) {
+                $branchIdToUse = ($userRole === 'Admin' && $selectedBranchId) ? $selectedBranchId : $userBranchId;
+                $totalConsolesStmt->bind_param("i", $branchIdToUse);
             }
             $totalConsolesStmt->execute();
             $totalConsoles = $totalConsolesStmt->get_result()->fetch_assoc()['total'];
@@ -114,13 +136,15 @@ try {
                 LEFT JOIN consoles c ON gs.console_id = c.id
                 WHERE gs.status IN ('active', 'paused')";
 
-            if ($isManagerRestricted && $userBranchId) {
+            if (($userRole === 'Admin' && $selectedBranchId) || ($isManagerRestricted && $userBranchId)) {
+                $branchIdToUse = ($userRole === 'Admin' && $selectedBranchId) ? $selectedBranchId : $userBranchId;
                 $uptimeQuery .= " AND c.branch_id = ?";
             }
 
             $uptimeStmt = $db->prepare($uptimeQuery);
-            if ($isManagerRestricted && $userBranchId) {
-                $uptimeStmt->bind_param("i", $userBranchId);
+            if (($userRole === 'Admin' && $selectedBranchId) || ($isManagerRestricted && $userBranchId)) {
+                $branchIdToUse = ($userRole === 'Admin' && $selectedBranchId) ? $selectedBranchId : $userBranchId;
+                $uptimeStmt->bind_param("i", $branchIdToUse);
             }
             $uptimeStmt->execute();
             $uptimeRow = $uptimeStmt->get_result()->fetch_assoc() ?: ['active_sessions' => 0, 'total_running_seconds' => 0];
@@ -150,28 +174,45 @@ try {
             echo json_encode(['success' => true, 'data' => $data]);
         } elseif ($action === 'charts') {
             $period = $_GET['period'] ?? 'daily';
+            $selectedBranchId = $_GET['branch_id'] ?? null; // From topbar dropdown
 
             // Check if user is a manager and should be restricted to their branch
             $userBranchId = Auth::userBranchId();
             $isManagerRestricted = Auth::isManagerRestricted();
+            $userRole = Auth::userRole();
 
             $branchCondition = '';
             $branchParams = [];
             $branchParamTypes = '';
 
-            if ($isManagerRestricted && $userBranchId) {
+            // Priority: Admin can select any branch via dropdown, Manager restricted to their branch
+            if ($userRole === 'Admin' && $selectedBranchId) {
+                // Admin selected a specific branch from dropdown
+                $branchCondition = " AND branch_id = ?";
+                $branchParams[] = $selectedBranchId;
+                $branchParamTypes = 'i';
+            } elseif ($isManagerRestricted && $userBranchId) {
+                // Manager restricted to their branch
                 $branchCondition = " AND branch_id = ?";
                 $branchParams[] = $userBranchId;
                 $branchParamTypes = 'i';
             }
 
+            // Add data isolation for non-Admin users
+            $dataIsolationCondition = '';
+            if ($userRole !== 'Admin') {
+                $dataIsolationCondition = " AND created_by = ?";
+                $branchParams[] = $currentUserId;
+                $branchParamTypes .= 'i';
+            }
+
             // Revenue chart data
             if ($period === 'daily') {
-                $revenueChartQuery = "SELECT HOUR(created_at) as label, SUM(total_amount) as value FROM transactions WHERE DATE(created_at) = CURDATE() $branchCondition GROUP BY HOUR(created_at) ORDER BY label";
+                $revenueChartQuery = "SELECT HOUR(created_at) as label, SUM(total_amount) as value FROM transactions WHERE DATE(created_at) = CURDATE() $branchCondition $dataIsolationCondition GROUP BY HOUR(created_at) ORDER BY label";
             } elseif ($period === 'monthly') {
-                $revenueChartQuery = "SELECT DAY(created_at) as label, SUM(total_amount) as value FROM transactions WHERE MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE()) $branchCondition GROUP BY DAY(created_at) ORDER BY label";
+                $revenueChartQuery = "SELECT DAY(created_at) as label, SUM(total_amount) as value FROM transactions WHERE MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE()) $branchCondition $dataIsolationCondition GROUP BY DAY(created_at) ORDER BY label";
             } else {
-                $revenueChartQuery = "SELECT MONTH(created_at) as label, SUM(total_amount) as value FROM transactions WHERE YEAR(created_at) = YEAR(CURDATE()) $branchCondition GROUP BY MONTH(created_at) ORDER BY label";
+                $revenueChartQuery = "SELECT MONTH(created_at) as label, SUM(total_amount) as value FROM transactions WHERE YEAR(created_at) = YEAR(CURDATE()) $branchCondition $dataIsolationCondition GROUP BY MONTH(created_at) ORDER BY label";
             }
 
             $revenueChartStmt = $db->prepare($revenueChartQuery);
@@ -183,11 +224,11 @@ try {
 
             // Customer trend
             if ($period === 'daily') {
-                $customerChartQuery = "SELECT HOUR(created_at) as label, COUNT(DISTINCT customer_name) as value FROM transactions WHERE DATE(created_at) = CURDATE() $branchCondition GROUP BY HOUR(created_at) ORDER BY label";
+                $customerChartQuery = "SELECT HOUR(created_at) as label, COUNT(DISTINCT customer_name) as value FROM transactions WHERE DATE(created_at) = CURDATE() $branchCondition $dataIsolationCondition GROUP BY HOUR(created_at) ORDER BY label";
             } elseif ($period === 'monthly') {
-                $customerChartQuery = "SELECT DAY(created_at) as label, COUNT(DISTINCT customer_name) as value FROM transactions WHERE MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE()) $branchCondition GROUP BY DAY(created_at) ORDER BY label";
+                $customerChartQuery = "SELECT DAY(created_at) as label, COUNT(DISTINCT customer_name) as value FROM transactions WHERE MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE()) $branchCondition $dataIsolationCondition GROUP BY DAY(created_at) ORDER BY label";
             } else {
-                $customerChartQuery = "SELECT MONTH(created_at) as label, COUNT(DISTINCT customer_name) as value FROM transactions WHERE YEAR(created_at) = YEAR(CURDATE()) $branchCondition GROUP BY MONTH(created_at) ORDER BY label";
+                $customerChartQuery = "SELECT MONTH(created_at) as label, COUNT(DISTINCT customer_name) as value FROM transactions WHERE YEAR(created_at) = YEAR(CURDATE()) $branchCondition $dataIsolationCondition GROUP BY MONTH(created_at) ORDER BY label";
             }
 
             $customerChartStmt = $db->prepare($customerChartQuery);
@@ -205,6 +246,12 @@ try {
                 ]
             ]);
         } elseif ($action === 'activity-logs') {
+            // Restrict activity logs to Admin only
+            if (!Auth::hasRole('Admin')) {
+                echo json_encode(['success' => false, 'message' => 'Access denied. Admin privileges required.']);
+                exit;
+            }
+
             $limit = intval($_GET['limit'] ?? 10);
             $stmt = $db->prepare("SELECT al.*, u.full_name as user_name FROM activity_logs al LEFT JOIN users u ON al.user_id = u.id ORDER BY al.created_at DESC LIMIT ?");
             $stmt->bind_param("i", $limit);

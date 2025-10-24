@@ -1,9 +1,9 @@
 <?php
 $currentPage = 'transactions';
 
-// Check if user is admin - redirect staff to dashboard
+// Check if user has access to transactions - redirect others to dashboard
 require_once __DIR__ . '/../config/auth.php';
-if (!Auth::hasRole('Admin')) {
+if (!Auth::hasRole('Admin') && !Auth::hasRole('Manager')) {
     header('Location: ' . SITE_URL . '/pages/dashboard.php');
     exit();
 }
@@ -30,9 +30,11 @@ require_once __DIR__ . '/../includes/header.php';
                 <select id="console-filter" class="filter-select">
                     <option value="">All Consoles</option>
                 </select>
-                <select id="branch-filter" class="filter-select">
-                    <option value="">All Branches</option>
-                </select>
+                <?php if (Auth::hasRole('Admin')): ?>
+                    <select id="branch-filter" class="filter-select">
+                        <option value="">All Branches</option>
+                    </select>
+                <?php endif; ?>
                 <select id="payment-filter" class="filter-select">
                     <option value="">All Payments</option>
                     <option value="cash">Cash</option>
@@ -759,12 +761,22 @@ require_once __DIR__ . '/../includes/header.php';
     function loadTransactions() {
         const startDate = document.getElementById('start-date').value;
         const endDate = document.getElementById('end-date').value;
-        const branchId = document.getElementById('branch-filter').value;
+        const branchFilter = document.getElementById('branch-filter');
+        const branchId = branchFilter ? branchFilter.value : '';
+
+        // Check if there's a topbar branch selection
+        const topbarBranchId = localStorage.getItem('selectedBranchId');
+        const finalBranchId = topbarBranchId || branchId;
 
         let url = `${SITE_URL}/api/transactions.php?action=list`;
         if (startDate) url += `&start_date=${startDate}`;
         if (endDate) url += `&end_date=${endDate}`;
-        if (branchId) url += `&branch_id=${branchId}`;
+        if (finalBranchId) url += `&branch_id=${finalBranchId}`;
+
+        console.log('Loading transactions with URL:', url);
+        console.log('Topbar branch ID:', topbarBranchId);
+        console.log('Page branch ID:', branchId);
+        console.log('Final branch ID:', finalBranchId);
 
         fetch(url)
             .then(res => res.json())
@@ -808,20 +820,25 @@ require_once __DIR__ . '/../includes/header.php';
         });
 
         const branchFilter = document.getElementById('branch-filter');
-        branchFilter.innerHTML = '<option value="">All Branches</option>';
-        Array.from(uniqueBranches).sort().forEach(branch => {
-            const option = document.createElement('option');
-            option.value = branch;
-            option.textContent = branch;
-            branchFilter.appendChild(option);
-        });
+        if (branchFilter) {
+            branchFilter.innerHTML = '<option value="">All Branches</option>';
+        }
+        if (branchFilter) {
+            Array.from(uniqueBranches).sort().forEach(branch => {
+                const option = document.createElement('option');
+                option.value = branch;
+                option.textContent = branch;
+                branchFilter.appendChild(option);
+            });
+        }
     }
 
     // Apply all filters
     function applyFilters() {
         const searchTerm = document.getElementById('search-input').value.toLowerCase();
         const consoleFilter = document.getElementById('console-filter').value.toLowerCase();
-        const branchFilter = document.getElementById('branch-filter').value.toLowerCase();
+        const branchFilterElement = document.getElementById('branch-filter');
+        const branchFilter = branchFilterElement ? branchFilterElement.value.toLowerCase() : '';
         const paymentFilter = document.getElementById('payment-filter').value.toLowerCase();
 
         filteredTransactions = allTransactions.filter(txn => {
@@ -1415,7 +1432,10 @@ Created By: ${transaction.user_name || '-'}
     });
 
     document.getElementById('console-filter').addEventListener('change', applyFilters);
-    document.getElementById('branch-filter').addEventListener('change', applyFilters);
+    const branchFilterElement = document.getElementById('branch-filter');
+    if (branchFilterElement) {
+        branchFilterElement.addEventListener('change', applyFilters);
+    }
     document.getElementById('payment-filter').addEventListener('change', applyFilters);
 
     document.getElementById('apply-filters').addEventListener('click', loadTransactions);
@@ -1424,7 +1444,10 @@ Created By: ${transaction.user_name || '-'}
         initializeDates();
         document.getElementById('search-input').value = '';
         document.getElementById('console-filter').value = '';
-        document.getElementById('branch-filter').value = '';
+        const branchFilterElement = document.getElementById('branch-filter');
+        if (branchFilterElement) {
+            branchFilterElement.value = '';
+        }
         document.getElementById('payment-filter').value = '';
         document.getElementById('clear-search').style.display = 'none';
         loadTransactions();
@@ -1462,8 +1485,31 @@ Created By: ${transaction.user_name || '-'}
         displayTransactions();
     });
 
+    // Listen for topbar branch changes and filter transactions
+    window.addEventListener('branchChanged', function(event) {
+        console.log('Transactions: Branch changed to:', event.detail);
+        const eventBranchId = event.detail.branchId;
+
+        // Update the branch filter to match topbar selection (if it exists)
+        const branchFilterElement = document.getElementById('branch-filter');
+        if (branchFilterElement) {
+            branchFilterElement.value = eventBranchId || '';
+        }
+
+        // Reload transactions with new filter
+        loadTransactions();
+    });
+
     // Initial load
     initializeDates();
+
+    // Load transactions based on current topbar selection
+    const storedBranchId = localStorage.getItem('selectedBranchId');
+    const topbarBranchFilterElement = document.getElementById('branch-filter');
+    if (topbarBranchFilterElement && storedBranchId) {
+        topbarBranchFilterElement.value = storedBranchId;
+    }
+
     loadTransactions();
 
     // Auto-refresh every 30 seconds
