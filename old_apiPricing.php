@@ -15,7 +15,6 @@ try {
             if ($action === 'list') {
                 // Get all pricing data
                 $rate_type = $_GET['rate_type'] ?? '';
-                $branch_id = $_GET['branch_id'] ?? '';
 
                 // Check if user is a manager/staff and should be restricted to their branch
                 $userBranchId = Auth::userBranchId();
@@ -26,17 +25,13 @@ try {
                 $param_types = '';
 
                 if ($rate_type) {
-                    $where_conditions[] = "p.rate_type = ?";
+                    $where_conditions[] = "rate_type = ?";
                     $params[] = $rate_type;
                     $param_types .= 's';
                 }
 
-                if ($branch_id) {
-                    $where_conditions[] = "p.branch_id = ?";
-                    $params[] = $branch_id;
-                    $param_types .= 'i';
-                } elseif ($isManagerRestricted && $userBranchId) {
-                    $where_conditions[] = "p.branch_id = ?";
+                if ($isManagerRestricted && $userBranchId) {
+                    $where_conditions[] = "branch_id = ?";
                     $params[] = $userBranchId;
                     $param_types .= 'i';
                 }
@@ -47,11 +42,9 @@ try {
                 }
 
                 $stmt = $db->prepare("
-                    SELECT p.*, b.name as branch_name, b.location as branch_location
-                    FROM pricing p
-                    LEFT JOIN branches b ON p.branch_id = b.id
+                    SELECT * FROM pricing 
                     {$where_clause}
-                    ORDER BY p.rate_type, p.player_count ASC
+                    ORDER BY rate_type, player_count ASC
                 ");
 
                 if (!empty($params)) {
@@ -70,12 +63,7 @@ try {
             } elseif ($action === 'get' && isset($_GET['id'])) {
                 // Get single pricing entry
                 $id = intval($_GET['id']);
-                $stmt = $db->prepare("
-                    SELECT p.*, b.name as branch_name, b.location as branch_location
-                    FROM pricing p
-                    LEFT JOIN branches b ON p.branch_id = b.id
-                    WHERE p.id = ?
-                ");
+                $stmt = $db->prepare("SELECT * FROM pricing WHERE id = ?");
                 $stmt->bind_param("i", $id);
                 $stmt->execute();
                 $result = $stmt->get_result();
@@ -153,16 +141,6 @@ try {
                 $duration_30 = floatval($input['duration_30'] ?? 0);
                 $duration_45 = floatval($input['duration_45'] ?? 0);
                 $duration_60 = floatval($input['duration_60'] ?? 0);
-                $branch_id = intval($input['branch_id'] ?? 1);
-
-                // Check if user is a manager/staff and should be restricted to their branch
-                $userBranchId = Auth::userBranchId();
-                $isManagerRestricted = Auth::isManagerRestricted();
-
-                if ($isManagerRestricted && $userBranchId) {
-                    // Manager/Staff can only update pricing for their branch
-                    $branch_id = $userBranchId;
-                }
 
                 if (!$rate_type || !$player_count) {
                     echo json_encode(['success' => false, 'message' => 'Rate type and player count are required']);
@@ -171,10 +149,10 @@ try {
 
                 $stmt = $db->prepare("
                     UPDATE pricing 
-                    SET rate_type = ?, player_count = ?, duration_15 = ?, duration_30 = ?, duration_45 = ?, duration_60 = ?, branch_id = ? 
+                    SET rate_type = ?, player_count = ?, duration_15 = ?, duration_30 = ?, duration_45 = ?, duration_60 = ? 
                     WHERE id = ?
                 ");
-                $stmt->bind_param("siddddii", $rate_type, $player_count, $duration_15, $duration_30, $duration_45, $duration_60, $branch_id, $id);
+                $stmt->bind_param("siddddi", $rate_type, $player_count, $duration_15, $duration_30, $duration_45, $duration_60, $id);
 
                 if ($stmt->execute()) {
                     echo json_encode(['success' => true, 'message' => 'Pricing entry updated successfully']);

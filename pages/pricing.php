@@ -31,6 +31,11 @@ $peakHours = '';
     <div class="section-header">
         <h2 class="section-title">Price Management</h2>
         <div class="header-actions">
+            <?php if (Auth::hasRole('Admin')): ?>
+                <select id="branch-filter" class="form-control" style="width: auto; display: inline-block;">
+                    <option value="">All Branches</option>
+                </select>
+            <?php endif; ?>
             <button id="refresh-pricing-btn" class="btn btn--secondary">🔄 Refresh</button>
             <?php if (Auth::hasRole('Admin') || Auth::hasRole('Manager')): ?>
                 <button id="add-pricing-btn" class="btn btn--primary">Add Pricing</button>
@@ -55,6 +60,9 @@ $peakHours = '';
                                 <th>30 Mins</th>
                                 <th>45 Mins</th>
                                 <th>60 Mins</th>
+                                <?php if (Auth::hasRole('Admin')): ?>
+                                    <th>Branch</th>
+                                <?php endif; ?>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -96,6 +104,9 @@ $peakHours = '';
                                 <th>30 Mins</th>
                                 <th>45 Mins</th>
                                 <th>60 Mins</th>
+                                <?php if (Auth::hasRole('Admin')): ?>
+                                    <th>Branch</th>
+                                <?php endif; ?>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -137,6 +148,16 @@ $peakHours = '';
                     <option value="vip">VIP</option>
                 </select>
             </div>
+            <?php if (Auth::hasRole('Admin')): ?>
+                <div class="form-group">
+                    <label class="form-label">Branch *</label>
+                    <select class="form-control" id="pricing-branch" required>
+                        <option value="">Select Branch</option>
+                    </select>
+                </div>
+            <?php else: ?>
+                <input type="hidden" id="pricing-branch" value="<?php echo Auth::userBranchId() ?? 1; ?>">
+            <?php endif; ?>
             <div class="form-group">
                 <label class="form-label">Player Count *</label>
                 <select class="form-control" id="pricing-player-count" required>
@@ -172,9 +193,55 @@ $peakHours = '';
 </div>
 
 <script>
+    // Load branches for pricing
+    function loadPricingBranches() {
+        fetch(`${SITE_URL}/api/branches.php?action=list`)
+            .then(res => res.json())
+            .then(result => {
+                if (result.success) {
+                    const branchFilter = document.getElementById('branch-filter');
+                    const pricingBranch = document.getElementById('pricing-branch');
+
+                    if (branchFilter) {
+                        branchFilter.innerHTML = '<option value="">All Branches</option>';
+                    }
+                    if (pricingBranch) {
+                        pricingBranch.innerHTML = '<option value="">Select Branch</option>';
+                    }
+
+                    result.data.forEach(branch => {
+                        if (branchFilter) {
+                            const option1 = document.createElement('option');
+                            option1.value = branch.id;
+                            option1.textContent = `${branch.name} - ${branch.location}`;
+                            branchFilter.appendChild(option1);
+                        }
+
+                        if (pricingBranch) {
+                            const option2 = document.createElement('option');
+                            option2.value = branch.id;
+                            option2.textContent = `${branch.name} - ${branch.location}`;
+                            pricingBranch.appendChild(option2);
+                        }
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error loading branches:', error);
+            });
+    }
+
     // Load pricing data dynamically
     function loadPricingData() {
-        fetch(`${SITE_URL}/api/pricing.php?action=list`)
+        const branchFilter = document.getElementById('branch-filter');
+        const selectedBranch = branchFilter ? branchFilter.value : '';
+
+        let url = `${SITE_URL}/api/pricing.php?action=list`;
+        if (selectedBranch) {
+            url += `&branch_id=${selectedBranch}`;
+        }
+
+        fetch(url)
             .then(res => res.json())
             .then(result => {
                 if (result.success) {
@@ -212,6 +279,7 @@ $peakHours = '';
                 <td>₹${parseFloat(rate.duration_30 || 0).toFixed(2)}</td>
                 <td>₹${parseFloat(rate.duration_45 || 0).toFixed(2)}</td>
                 <td>₹${parseFloat(rate.duration_60 || 0).toFixed(2)}</td>
+                ${USER_ROLE === 'Admin' ? `<td>${rate.branch_name || 'Unknown Branch'}</td>` : ''}
                 <td>
                     ${USER_ROLE === 'Admin' || USER_ROLE === 'Manager' ? `
                     <button class="btn btn--sm btn--primary" onclick="editPricingEntry(${rate.id})">Edit</button>
@@ -238,6 +306,10 @@ $peakHours = '';
                     document.getElementById('pricing-30').value = pricing.duration_30 || 0;
                     document.getElementById('pricing-45').value = pricing.duration_45 || 0;
                     document.getElementById('pricing-60').value = pricing.duration_60 || 0;
+                    const branchElement = document.getElementById('pricing-branch');
+                    if (branchElement) {
+                        branchElement.value = pricing.branch_id || '';
+                    }
                     document.getElementById('edit-pricing-modal').classList.remove('hidden');
                 }
             });
@@ -279,6 +351,12 @@ $peakHours = '';
     }
     document.getElementById('refresh-pricing-btn').addEventListener('click', loadPricingData);
 
+    // Branch filter event listener
+    const branchFilter = document.getElementById('branch-filter');
+    if (branchFilter) {
+        branchFilter.addEventListener('change', loadPricingData);
+    }
+
     document.getElementById('pricing-form').addEventListener('submit', (e) => {
         e.preventDefault();
 
@@ -291,7 +369,8 @@ $peakHours = '';
             duration_15: parseFloat(document.getElementById('pricing-15').value),
             duration_30: parseFloat(document.getElementById('pricing-30').value),
             duration_45: parseFloat(document.getElementById('pricing-45').value),
-            duration_60: parseFloat(document.getElementById('pricing-60').value)
+            duration_60: parseFloat(document.getElementById('pricing-60').value),
+            branch_id: document.getElementById('pricing-branch').value
         };
 
         const url = isEdit ?
@@ -321,6 +400,7 @@ $peakHours = '';
     });
 
     // Initial load
+    loadPricingBranches();
     loadPricingData();
 </script>
 

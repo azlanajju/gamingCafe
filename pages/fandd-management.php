@@ -8,11 +8,6 @@ require_once __DIR__ . '/../includes/header.php';
     <div class="section-header">
         <h2 class="section-title">Food & Drinks Management</h2>
         <div class="header-actions">
-            <?php if (Auth::hasRole('Admin')): ?>
-                <select id="branch-filter" class="form-control" style="width: auto; display: inline-block;">
-                    <option value="">All Branches</option>
-                </select>
-            <?php endif; ?>
             <select id="category-filter" class="form-control" style="width: auto; display: inline-block;">
                 <option value="">All Categories</option>
                 <option value="beverages">Beverages</option>
@@ -97,13 +92,9 @@ require_once __DIR__ . '/../includes/header.php';
                 console.log('Branches result:', result);
                 if (result.success && result.data.length > 0) {
                     const itemSelect = document.getElementById('item-branch');
-                    const filterSelect = document.getElementById('branch-filter');
 
                     if (itemSelect) {
                         itemSelect.innerHTML = '<option value="">Select Branch</option>';
-                    }
-                    if (filterSelect) {
-                        filterSelect.innerHTML = '<option value="">All Branches</option>';
                     }
 
                     result.data.forEach(branch => {
@@ -112,13 +103,6 @@ require_once __DIR__ . '/../includes/header.php';
                             option1.value = branch.id;
                             option1.textContent = `${branch.name} - ${branch.location}`;
                             itemSelect.appendChild(option1);
-                        }
-
-                        if (filterSelect) {
-                            const option2 = document.createElement('option');
-                            option2.value = branch.id;
-                            option2.textContent = `${branch.name} - ${branch.location}`;
-                            filterSelect.appendChild(option2);
                         }
                     });
                 } else {
@@ -141,7 +125,10 @@ require_once __DIR__ . '/../includes/header.php';
             // For Managers and Staff, always filter by their branch
             params.push(`branch=<?php echo Auth::userBranchId() ?? 1; ?>`);
         <?php else: ?>
-            if (branch) params.push(`branch=${branch}`);
+            // For Admins, use topbar branch selection or passed branch parameter
+            const topbarBranchId = localStorage.getItem('selectedBranchId');
+            const finalBranchId = topbarBranchId || branch;
+            if (finalBranchId) params.push(`branch=${finalBranchId}`);
         <?php endif; ?>
 
         if (params.length > 0) {
@@ -299,24 +286,15 @@ require_once __DIR__ . '/../includes/header.php';
 
     document.getElementById('category-filter').addEventListener('change', (e) => {
         const category = e.target.value;
-        const branchElement = document.getElementById('branch-filter');
         <?php if (Auth::isManagerRestricted()): ?>
             const userBranch = '<?php echo Auth::userBranchId() ?? 1; ?>';
             loadItems(category, userBranch);
         <?php else: ?>
-            const selectedBranch = branchElement ? branchElement.value : '';
-            loadItems(category, selectedBranch);
+            // Use topbar branch selection
+            const topbarBranchId = localStorage.getItem('selectedBranchId');
+            loadItems(category, topbarBranchId);
         <?php endif; ?>
     });
-
-    const branchFilter = document.getElementById('branch-filter');
-    if (branchFilter) {
-        branchFilter.addEventListener('change', (e) => {
-            const branch = e.target.value;
-            const category = document.getElementById('category-filter').value;
-            loadItems(category, branch);
-        });
-    }
 
     // Initial load
     loadFanddBranches();
@@ -325,7 +303,9 @@ require_once __DIR__ . '/../includes/header.php';
     <?php if (Auth::isManagerRestricted()): ?>
         loadItems('', '<?php echo Auth::userBranchId() ?? 1; ?>');
     <?php else: ?>
-        loadItems();
+        // For Admins, use topbar branch selection
+        const topbarBranchId = localStorage.getItem('selectedBranchId');
+        loadItems('', topbarBranchId);
     <?php endif; ?>
 </script>
 

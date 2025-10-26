@@ -163,7 +163,7 @@ class SessionManager
             return ['success' => false, 'message' => 'Console ID and customer name are required'];
         }
 
-        // Check if console is available (case-insensitive) and get its branch_id
+        // Check if console is available (case-insensitive)
         $stmt = $this->db->prepare("SELECT * FROM consoles WHERE id = ? AND LOWER(status) = 'available'");
         $stmt->bind_param("i", $console_id);
         $stmt->execute();
@@ -176,17 +176,15 @@ class SessionManager
         // Start session
         $start_time = date('Y-m-d H:i:s');
         $user_id = $_SESSION['user_id'] ?? 1;
-        $branch_id = $console['branch_id'] ?? 1; // Get branch_id from console
         $stmt = $this->db->prepare("
             INSERT INTO gaming_sessions 
-            (console_id, branch_id, customer_name, customer_number, player_count, rate_type, start_time, timezone_offset, status, created_by) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)
+            (console_id, customer_name, customer_number, player_count, rate_type, start_time, timezone_offset, status, created_by) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'active', ?)
         ");
-        $stmt->bind_param("iiississi", $console_id, $branch_id, $customer_name, $customer_number, $player_count, $rate_type, $start_time, $timezone_offset, $user_id);
+        $stmt->bind_param("ississsi", $console_id, $customer_name, $customer_number, $player_count, $rate_type, $start_time, $timezone_offset, $user_id);
 
         if ($stmt->execute()) {
             $session_id = $this->db->insert_id;
-            error_log("startSession: Successfully created session with ID {$session_id} for console {$console_id}, branch {$branch_id}");
 
             // Create initial session segment
             error_log("startSession: Attempting to create initial segment for session_id={$session_id}");
@@ -202,7 +200,7 @@ class SessionManager
             }
 
             // Update console status
-            $stmt = $this->db->prepare("UPDATE consoles SET status = 'In Use' WHERE id = ?");
+            $stmt = $this->db->prepare("UPDATE consoles SET status = 'Occupied' WHERE id = ?");
             $stmt->bind_param("i", $console_id);
             $stmt->execute();
 
@@ -215,8 +213,7 @@ class SessionManager
                 'data' => ['session_id' => $session_id]
             ];
         } else {
-            error_log("startSession: Failed to execute session creation query. Error: " . $this->db->error);
-            return ['success' => false, 'message' => 'Failed to start session: ' . $this->db->error];
+            return ['success' => false, 'message' => 'Failed to start session'];
         }
     }
 
@@ -491,7 +488,7 @@ class SessionManager
             $stmt->bind_param("i", $source_console_id);
             $stmt->execute();
 
-            $stmt = $this->db->prepare("UPDATE consoles SET status = 'In Use' WHERE id = ?");
+            $stmt = $this->db->prepare("UPDATE consoles SET status = 'Occupied' WHERE id = ?");
             $stmt->bind_param("i", $target_console_id);
             $stmt->execute();
 
@@ -571,14 +568,6 @@ class SessionManager
     private function endCurrentActiveSegment($session_id, $end_time, $player_count, $rate_type)
     {
         error_log("endCurrentActiveSegment: session_id={$session_id}, end_time={$end_time}, player_count={$player_count}, rate_type={$rate_type}");
-
-        // Get session branch_id
-        $session_stmt = $this->db->prepare("SELECT branch_id FROM gaming_sessions WHERE id = ?");
-        $session_stmt->bind_param("i", $session_id);
-        $session_stmt->execute();
-        $session_result = $session_stmt->get_result()->fetch_assoc();
-        $branch_id = $session_result['branch_id'] ?? null;
-
         $stmt = $this->db->prepare("
             SELECT id, start_time FROM session_segments 
             WHERE session_id = ? AND end_time IS NULL 
@@ -592,11 +581,12 @@ class SessionManager
             error_log("endCurrentActiveSegment: Found active segment id={$active_segment['id']} starting at {$active_segment['start_time']}");
             $start_datetime = new DateTime($active_segment['start_time']);
             $end_datetime = new DateTime($end_time);
+            $interval = $end_datetime->diff($start_datetime);
+            $duration_minutes = $interval->days * 24 * 60 + $interval->h * 60 + $interval->i;
             $actual_seconds = $end_datetime->getTimestamp() - $start_datetime->getTimestamp();
-            $duration_minutes = round($actual_seconds / 60);
 
             // Calculate amount for the segment using billing logic
-            $segment_billing = $this->calculateSessionBilling($actual_seconds, $player_count, $rate_type, $branch_id);
+            $segment_billing = $this->calculateSessionBilling($actual_seconds, $player_count, $rate_type);
             $segment_amount = $segment_billing['total_amount'];
 
             error_log("endCurrentActiveSegment: Calculated duration_minutes={$duration_minutes}, actual_seconds={$actual_seconds}, segment_amount={$segment_amount}");
@@ -965,7 +955,7 @@ class SessionManager
         $pause_duration = $session['total_pause_duration'] ?? 0;
         $actual_play_time = $total_seconds - $pause_duration;
 
-        $billing_data = $this->calculateSessionBilling($actual_play_time, $session['player_count'], $session['rate_type'], $session['branch_id']);
+        $billing_data = $this->calculateSessionBilling($actual_play_time, $session['player_count'], $session['rate_type']);
         $fandd_total = $this->getSessionFandDTotal($session['id']);
 
         $gaming_amount = $billing_data['total_amount'];
@@ -1219,7 +1209,7 @@ class SessionManager
             $pause_during_segment = ($pauseResult['completed_pause_seconds'] ?? 0) + ($pauseResult['ongoing_pause_seconds'] ?? 0);
 
             $segment_actual_play_time = max(0, $segment_duration_seconds - $pause_during_segment);
-            $segment_billing = $this->calculateSessionBilling($segment_actual_play_time, $segment['player_count'], $session['rate_type'], $session['branch_id']);
+            $segment_billing = $this->calculateSessionBilling($segment_actual_play_time, $segment['player_count'], $session['rate_type']);
             $segment['calculated_amount'] = $segment_billing['total_amount'];
             $segment['calculated_duration_minutes'] = round($segment_actual_play_time / 60);
             $total_gaming_amount += $segment['calculated_amount'];
@@ -1273,16 +1263,16 @@ class SessionManager
         ];
     }
 
-    private function calculateSessionBilling($seconds, $player_count, $rate_type, $branch_id = null)
+    private function calculateSessionBilling($seconds, $player_count, $rate_type)
     {
         $minutes = round($seconds / 60);
 
-        // Get pricing from database - use branch-specific pricing
+        // Get pricing from database
         $stmt = $this->db->prepare("
             SELECT * FROM pricing 
-            WHERE rate_type = ? AND player_count = ? AND branch_id = ?
+            WHERE rate_type = ? AND player_count = ?
         ");
-        $stmt->bind_param("sii", $rate_type, $player_count, $branch_id);
+        $stmt->bind_param("si", $rate_type, $player_count);
         $stmt->execute();
         $pricing = $stmt->get_result()->fetch_assoc();
 
