@@ -812,18 +812,23 @@ require_once __DIR__ . '/../includes/header.php';
             .then(res => res.json())
             .then(timeResult => {
                 if (timeResult.success && timeResult.data.session_id) {
-                    // Now fetch the segments using the session_id
-                    return fetch(`${SITE_URL}/api/sessions.php?action=get_session_segments&session_id=${timeResult.data.session_id}`);
+                    // Use the pre-billing details endpoint which returns properly calculated segments
+                    return fetch(`${SITE_URL}/api/sessions.php?action=get_pre_billing_details&session_id=${timeResult.data.session_id}`);
                 } else {
                     throw new Error('No active session found');
                 }
             })
             .then(res => res.json())
             .then(result => {
-                if (result.success && result.data && result.data.length > 0) {
-                    segmentsList.innerHTML = result.data.map(segment => {
-                        // Calculate exact duration from start_time and end_time
-                        const exactDuration = calculateExactDuration(segment.start_time, segment.end_time);
+                if (result.success && result.data && result.data.segments && result.data.segments.length > 0) {
+                    segmentsList.innerHTML = result.data.segments.map(segment => {
+                        // Use the calculated duration from backend (excludes paused time)
+                        const billedMinutes = segment.calculated_duration_minutes || segment.duration || 0;
+                        const billedHours = Math.floor(billedMinutes / 60);
+                        const billedMins = billedMinutes % 60;
+                        const billedSecs = 0;
+                        const exactDuration = `${billedHours.toString().padStart(2, '0')}:${billedMins.toString().padStart(2, '0')}:${billedSecs.toString().padStart(2, '0')}`;
+
                         return `
                             <div class="segment-item">
                                 <span class="segment-players">${segment.player_count} players</span>
@@ -834,10 +839,17 @@ require_once __DIR__ . '/../includes/header.php';
                     }).join('');
                 } else {
                     // Show current session as a segment if no segments found
+                    // Use the calculated duration from session data (excludes paused time)
+                    const billedMinutes = sessionData.duration_minutes || 0;
+                    const billedHours = Math.floor(billedMinutes / 60);
+                    const billedMins = billedMinutes % 60;
+                    const billedSecs = 0;
+                    const exactDuration = `${billedHours.toString().padStart(2, '0')}:${billedMins.toString().padStart(2, '0')}:${billedSecs.toString().padStart(2, '0')}`;
+
                     segmentsList.innerHTML = `
                         <div class="segment-item">
                             <span class="segment-players">${sessionData.player_count || 1} players</span>
-                            <span class="segment-time">${sessionData.formatted_time || '00:00:00'}</span>
+                            <span class="segment-time">${exactDuration}</span>
                             <span class="segment-amount">₹${parseFloat(sessionData.gaming_amount || 0).toFixed(2)}</span>
                         </div>
                     `;
@@ -846,10 +858,17 @@ require_once __DIR__ . '/../includes/header.php';
             .catch(error => {
                 console.error('Error fetching segments:', error);
                 // Fallback to current session data
+                // Use the calculated duration from session data (excludes paused time)
+                const billedMinutes = sessionData.duration_minutes || 0;
+                const billedHours = Math.floor(billedMinutes / 60);
+                const billedMins = billedMinutes % 60;
+                const billedSecs = 0;
+                const exactDuration = `${billedHours.toString().padStart(2, '0')}:${billedMins.toString().padStart(2, '0')}:${billedSecs.toString().padStart(2, '0')}`;
+
                 segmentsList.innerHTML = `
                     <div class="segment-item">
                         <span class="segment-players">${sessionData.player_count || 1} players</span>
-                        <span class="segment-time">${sessionData.formatted_time || '00:00:00'}</span>
+                        <span class="segment-time">${exactDuration}</span>
                         <span class="segment-amount">₹${parseFloat(sessionData.gaming_amount || 0).toFixed(2)}</span>
                     </div>
                 `;
