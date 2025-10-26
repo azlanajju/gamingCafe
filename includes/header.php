@@ -52,8 +52,10 @@ $currentUser = Auth::user();
                 <li><a href="<?php echo SITE_URL; ?>/pages/fandd-management.php" class="nav-item <?php echo ($currentPage ?? '') === 'fandd-management' ? 'active' : ''; ?>">🍕 F&D Management</a></li>
                 <li><a href="<?php echo SITE_URL; ?>/pages/coupons.php" class="nav-item <?php echo ($currentPage ?? '') === 'coupons' ? 'active' : ''; ?>">🎟️ Coupon Management</a></li>
                 <li><a href="<?php echo SITE_URL; ?>/pages/pricing.php" class="nav-item <?php echo ($currentPage ?? '') === 'pricing' ? 'active' : ''; ?>">💰 Price Management</a></li>
+                <?php if (Auth::hasRole('Admin') || Auth::hasRole('Manager')): ?>
+                    <li><a href="<?php echo SITE_URL; ?>/pages/users.php" class="nav-item <?php echo ($currentPage ?? '') === 'users' ? 'active' : ''; ?>">👨‍💼 User Management</a></li>
+                <?php endif; ?>
                 <?php if (Auth::hasRole('Admin')): ?>
-                    <li><a href="<?php echo SITE_URL; ?>/pages/users.php" class="nav-item admin-only <?php echo ($currentPage ?? '') === 'users' ? 'active' : ''; ?>">👨‍💼 User Management</a></li>
                     <li><a href="<?php echo SITE_URL; ?>/pages/branches.php" class="nav-item admin-only <?php echo ($currentPage ?? '') === 'branches' ? 'active' : ''; ?>">🏢 Branch Management</a></li>
                 <?php endif; ?>
                 <li><a href="<?php echo SITE_URL; ?>/pages/profile.php" class="nav-item <?php echo ($currentPage ?? '') === 'profile' ? 'active' : ''; ?>">👤 Profile Settings</a></li>

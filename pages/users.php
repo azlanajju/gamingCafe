@@ -3,9 +3,9 @@ $pageTitle = 'User Management';
 $currentPage = 'users';
 require_once __DIR__ . '/../includes/header.php';
 
-// Check admin access
-if (!Auth::hasRole('Admin')) {
-    die('Access denied. Admin privileges required.');
+// Check admin or manager access
+if (!Auth::hasRole('Admin') && !Auth::hasRole('Manager')) {
+    die('Access denied. Admin or Manager privileges required.');
 }
 ?>
 
@@ -71,9 +71,15 @@ if (!Auth::hasRole('Admin')) {
             <div class="form-group">
                 <label class="form-label">Role</label>
                 <select class="form-control" id="user-role" required>
-                    <option value="Staff">Staff</option>
-                    <option value="Manager">Manager</option>
-                    <option value="Admin">Admin</option>
+                    <?php if (Auth::hasRole('Admin')): ?>
+                        <option value="Staff">Staff</option>
+                        <option value="Manager">Manager</option>
+                        <option value="Admin">Admin</option>
+                    <?php else: ?>
+                        <!-- Managers can only create Staff and Manager roles -->
+                        <option value="Staff">Staff</option>
+                        <option value="Manager">Manager</option>
+                    <?php endif; ?>
                 </select>
             </div>
             <div class="form-group">
@@ -215,7 +221,22 @@ if (!Auth::hasRole('Admin')) {
                         document.getElementById('user-username').value = user.username;
                         document.getElementById('user-email').value = user.email;
                         document.getElementById('user-phone').value = user.phone;
-                        document.getElementById('user-role').value = user.role;
+
+                        // Handle role selection based on user permissions
+                        const roleSelect = document.getElementById('user-role');
+                        const currentRole = user.role;
+
+                        // For managers, ensure they can't change to Admin role
+                        <?php if (!Auth::hasRole('Admin')): ?>
+                            if (currentRole === 'Admin') {
+                                // If current user is Admin but logged in user is Manager, don't allow editing
+                                alert('You cannot edit Admin users');
+                                return;
+                            }
+                        <?php endif; ?>
+
+                        roleSelect.value = currentRole;
+
                         const branchElement = document.getElementById('user-branch');
                         if (branchElement) {
                             branchElement.value = user.branch_id || '';
