@@ -126,7 +126,7 @@ $rememberedUser = $_COOKIE['remember_user'] ?? '';
             </form>
 
             <div style="margin-top: 1rem; text-align: center; color: #888; font-size: 0.875rem;">
-                <p>Default credentials: <strong>admin</strong> / <strong>admin123</strong></p>
+                <!-- <p>Default credentials: <strong>admin</strong> / <strong>admin123</strong></p> -->
             </div>
         </div>
     </div>
