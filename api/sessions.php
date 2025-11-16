@@ -182,7 +182,21 @@ class SessionManager
             (console_id, branch_id, customer_name, customer_number, player_count, rate_type, start_time, timezone_offset, status, created_by) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?)
         ");
-        $stmt->bind_param("iiississi", $console_id, $branch_id, $customer_name, $customer_number, $player_count, $rate_type, $start_time, $timezone_offset, $user_id);
+        // Types: i = int, s = string
+        // console_id (i), branch_id (i), customer_name (s), customer_number (s),
+        // player_count (i), rate_type (s), start_time (s), timezone_offset (s), user_id (i)
+        $stmt->bind_param(
+            "iississsi",
+            $console_id,
+            $branch_id,
+            $customer_name,
+            $customer_number,
+            $player_count,
+            $rate_type,
+            $start_time,
+            $timezone_offset,
+            $user_id
+        );
 
         if ($stmt->execute()) {
             $session_id = $this->db->insert_id;
