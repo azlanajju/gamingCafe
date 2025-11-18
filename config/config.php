@@ -8,7 +8,7 @@ define('DB_NAME', 'gaming_cafe_db');
 
 // Application Configuration
 define('SITE_NAME', 'GameBot Gaming Cafe');
-define('SITE_URL', 'http://localhost/Gaming-cafe');
+define('SITE_URL', 'http://localhost/GamingCafe');
 define('TIMEZONE', 'Asia/Kolkata');
 
 // Session Configuration

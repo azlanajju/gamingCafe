@@ -28,7 +28,7 @@ try {
                 $branchParamTypes = '';
 
                 // Priority: Admin can select any branch via dropdown, Manager restricted to their branch
-                if ($userRole === 'Admin' && $selectedBranchId) {
+                if (($userRole === 'Super Admin' || $userRole === 'Admin') && $selectedBranchId) {
                     // Admin selected a specific branch from dropdown
                     $branchCondition = " AND c.branch_id = ?";
                     $branchParams[] = $selectedBranchId;

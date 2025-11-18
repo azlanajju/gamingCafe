@@ -20,7 +20,7 @@ CREATE TABLE `users` (
   `email` varchar(255) NOT NULL,
   `phone` varchar(20) DEFAULT NULL,
   `password` varchar(255) NOT NULL,
-  `role` enum('Admin','Manager','Staff') NOT NULL DEFAULT 'Staff',
+  `role` enum('Super Admin','Admin','Manager','Staff') NOT NULL DEFAULT 'Staff',
   `branch_id` int(11) DEFAULT 1,
   `status` enum('Active','Inactive') NOT NULL DEFAULT 'Active',
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -30,9 +30,9 @@ CREATE TABLE `users` (
   UNIQUE KEY `email` (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Insert default admin user (password: admin123)
+-- Insert default super admin user (password: admin123)
 INSERT INTO `users` (`full_name`, `username`, `email`, `phone`, `password`, `role`, `status`) VALUES
-('System Administrator', 'admin', 'admin@gamebot.com', '1234567890', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Admin', 'Active');
+('System Administrator', 'admin', 'admin@gamebot.com', '1234567890', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Super Admin', 'Active');
 
 -- --------------------------------------------------------
 -- Table structure for table `branches`

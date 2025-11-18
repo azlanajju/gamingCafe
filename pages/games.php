@@ -85,7 +85,7 @@ require_once __DIR__ . '/../includes/header.php';
                         card.className = 'game-card card';
                         card.setAttribute('data-category', game.category.toLowerCase());
                         let actionButtons = '';
-                        if (USER_ROLE === 'Admin' || USER_ROLE === 'Manager') {
+                        if (USER_ROLE === 'Super Admin' || USER_ROLE === 'Admin' || USER_ROLE === 'Manager') {
                             actionButtons = `
                                 <div class="card-actions">
                                     <button class="btn btn--sm btn--primary" onclick="editGame(${game.id})">
@@ -359,7 +359,7 @@ require_once __DIR__ . '/../includes/header.php';
         border-color: var(--color-primary);
     }
 
- 
+
     .game-card::after {
         content: '🎮';
         position: absolute;
@@ -808,6 +808,7 @@ require_once __DIR__ . '/../includes/header.php';
             opacity: 0;
             transform: translateY(30px) scale(0.95);
         }
+
         to {
             opacity: 1;
             transform: translateY(0) scale(1);
@@ -819,6 +820,7 @@ require_once __DIR__ . '/../includes/header.php';
             opacity: 0;
             transform: scale(0.9);
         }
+
         to {
             opacity: 1;
             transform: scale(1);
@@ -829,6 +831,7 @@ require_once __DIR__ . '/../includes/header.php';
         0% {
             background-position: -200px 0;
         }
+
         100% {
             background-position: calc(200px + 100%) 0;
         }

@@ -4,7 +4,7 @@ require_once __DIR__ . '/../config/auth.php';
 
 header('Content-Type: application/json');
 Auth::require();
-// Allow Admin and Manager roles to manage users
+// Allow Super Admin, Admin and Manager roles to manage users
 if (!Auth::hasRole('Admin') && !Auth::hasRole('Manager')) {
     echo json_encode(['success' => false, 'message' => 'Access denied. Admin or Manager privileges required.']);
     exit;
@@ -24,7 +24,7 @@ try {
                     $stmt = $db->prepare("SELECT u.id, u.full_name, u.username, u.email, u.phone, u.role, u.branch_id, u.status, b.name as branch_name FROM users u LEFT JOIN branches b ON u.branch_id = b.id WHERE u.branch_id = ? ORDER BY u.id DESC");
                     $stmt->bind_param("i", $userBranchId);
                 } else {
-                    // Admins can see all users
+                    // Super Admin and Admin can see all users
                     $stmt = $db->prepare("SELECT u.id, u.full_name, u.username, u.email, u.phone, u.role, u.branch_id, u.status, b.name as branch_name FROM users u LEFT JOIN branches b ON u.branch_id = b.id ORDER BY u.id DESC");
                 }
                 $stmt->execute();
@@ -44,7 +44,7 @@ try {
                     $stmt = $db->prepare("SELECT id, name, location FROM branches WHERE status = 'Active' AND id = ? ORDER BY name");
                     $stmt->bind_param("i", $userBranchId);
                 } else {
-                    // Admins can see all branches
+                    // Super Admin and Admin can see all branches
                     $stmt = $db->prepare("SELECT id, name, location FROM branches WHERE status = 'Active' ORDER BY name");
                 }
                 $stmt->execute();
@@ -75,6 +75,13 @@ try {
                         echo json_encode(['success' => false, 'message' => 'Managers can only create users for their own branch']);
                         exit;
                     }
+                }
+
+                // Only Super Admin can create Super Admin users
+                $userRole = Auth::userRole();
+                if ($data['role'] === 'Super Admin' && $userRole !== 'Super Admin') {
+                    echo json_encode(['success' => false, 'message' => 'Only Super Admin can create Super Admin users']);
+                    exit;
                 }
 
                 // Check if username or email already exists
@@ -135,6 +142,13 @@ try {
                     $data['branch_id'] = $userBranchId;
                 }
 
+                // Only Super Admin can assign Super Admin role
+                $userRole = Auth::userRole();
+                if ($data['role'] === 'Super Admin' && $userRole !== 'Super Admin') {
+                    echo json_encode(['success' => false, 'message' => 'Only Super Admin can assign Super Admin role']);
+                    exit;
+                }
+
                 if (isset($data['password']) && !empty($data['password'])) {
                     // Update with password
                     $hashedPassword = password_hash($data['password'], PASSWORD_DEFAULT);
@@ -193,6 +207,17 @@ try {
                         echo json_encode(['success' => false, 'message' => 'Managers can only delete users from their own branch']);
                         exit;
                     }
+                }
+
+                // Prevent deletion of Super Admin users (only Super Admin can delete Super Admin)
+                $checkStmt = $db->prepare("SELECT role FROM users WHERE id = ?");
+                $checkStmt->bind_param("i", $id);
+                $checkStmt->execute();
+                $targetUser = $checkStmt->get_result()->fetch_assoc();
+                $userRole = Auth::userRole();
+                if ($targetUser && $targetUser['role'] === 'Super Admin' && $userRole !== 'Super Admin') {
+                    echo json_encode(['success' => false, 'message' => 'Only Super Admin can delete Super Admin users']);
+                    exit;
                 }
 
                 // Prevent self-deletion

@@ -210,7 +210,7 @@ require_once __DIR__ . '/../includes/header.php';
                             </div>
                         </div>
                         
-                        ${USER_ROLE === 'Admin' || USER_ROLE === 'Manager' ? `
+                        ${(USER_ROLE === 'Super Admin' || USER_ROLE === 'Admin' || USER_ROLE === 'Manager') ? `
                         <div class="coupon-actions">
                             <button class="btn btn--sm btn--primary" onclick="editCoupon(${coupon.id})">
                                 <span class="btn-icon">✏️</span>

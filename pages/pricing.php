@@ -279,9 +279,9 @@ $peakHours = '';
                 <td>₹${parseFloat(rate.duration_30 || 0).toFixed(2)}</td>
                 <td>₹${parseFloat(rate.duration_45 || 0).toFixed(2)}</td>
                 <td>₹${parseFloat(rate.duration_60 || 0).toFixed(2)}</td>
-                ${USER_ROLE === 'Admin' ? `<td>${rate.branch_name || 'Unknown Branch'}</td>` : ''}
+                ${(USER_ROLE === 'Super Admin' || USER_ROLE === 'Admin') ? `<td>${rate.branch_name || 'Unknown Branch'}</td>` : ''}
                 <td>
-                    ${USER_ROLE === 'Admin' || USER_ROLE === 'Manager' ? `
+                    ${(USER_ROLE === 'Super Admin' || USER_ROLE === 'Admin' || USER_ROLE === 'Manager') ? `
                     <button class="btn btn--sm btn--primary" onclick="editPricingEntry(${rate.id})">Edit</button>
                     <button class="btn btn--sm btn--danger" onclick="deletePricingEntry(${rate.id})">Delete</button>
                     ` : ''}

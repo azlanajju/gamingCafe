@@ -71,7 +71,14 @@ if (!Auth::hasRole('Admin') && !Auth::hasRole('Manager')) {
             <div class="form-group">
                 <label class="form-label">Role</label>
                 <select class="form-control" id="user-role" required>
-                    <?php if (Auth::hasRole('Admin')): ?>
+                    <?php
+                    $currentUserRole = Auth::userRole();
+                    if ($currentUserRole === 'Super Admin'): ?>
+                        <option value="Staff">Staff</option>
+                        <option value="Manager">Manager</option>
+                        <option value="Admin">Admin</option>
+                        <option value="Super Admin">Super Admin</option>
+                    <?php elseif (Auth::hasRole('Admin')): ?>
                         <option value="Staff">Staff</option>
                         <option value="Manager">Manager</option>
                         <option value="Admin">Admin</option>
@@ -226,11 +233,19 @@ if (!Auth::hasRole('Admin') && !Auth::hasRole('Manager')) {
                         const roleSelect = document.getElementById('user-role');
                         const currentRole = user.role;
 
-                        // For managers, ensure they can't change to Admin role
-                        <?php if (!Auth::hasRole('Admin')): ?>
-                            if (currentRole === 'Admin') {
-                                // If current user is Admin but logged in user is Manager, don't allow editing
-                                alert('You cannot edit Admin users');
+                        // For managers, ensure they can't change to Admin or Super Admin role
+                        <?php
+                        $currentUserRole = Auth::userRole();
+                        if ($currentUserRole !== 'Super Admin' && !Auth::hasRole('Admin')): ?>
+                            if (currentRole === 'Admin' || currentRole === 'Super Admin') {
+                                // If current user is Admin/Super Admin but logged in user is Manager, don't allow editing
+                                alert('You cannot edit Admin or Super Admin users');
+                                return;
+                            }
+                        <?php elseif ($currentUserRole !== 'Super Admin'): ?>
+                            // Only Super Admin can edit Super Admin users
+                            if (currentRole === 'Super Admin') {
+                                alert('Only Super Admin can edit Super Admin users');
                                 return;
                             }
                         <?php endif; ?>

@@ -83,8 +83,10 @@ class Auth
         $_SESSION['user_role'] = $user['role'];
         $_SESSION['user_branch_id'] = $user['branch_id'];
 
-        // Log activity
-        self::logActivity($user['id'], 'login', 'User logged in');
+        // Log activity (skip for Super Admin)
+        if ($user['role'] !== 'Super Admin') {
+            self::logActivity($user['id'], 'login', 'User logged in');
+        }
 
         return ['success' => true, 'user' => $user];
     }
@@ -93,7 +95,11 @@ class Auth
     public static function logout()
     {
         if (self::check()) {
-            self::logActivity(self::userId(), 'logout', 'User logged out');
+            $userRole = $_SESSION['user_role'] ?? '';
+            // Log activity (skip for Super Admin)
+            if ($userRole !== 'Super Admin') {
+                self::logActivity(self::userId(), 'logout', 'User logged out');
+            }
         }
 
         session_unset();
@@ -120,12 +126,14 @@ class Auth
 
         $userRole = $_SESSION['user_role'] ?? '';
 
-        if ($role === 'Admin') {
-            return $userRole === 'Admin';
+        if ($role === 'Super Admin') {
+            return $userRole === 'Super Admin';
+        } elseif ($role === 'Admin') {
+            return in_array($userRole, ['Super Admin', 'Admin']);
         } elseif ($role === 'Manager') {
-            return in_array($userRole, ['Admin', 'Manager']);
+            return in_array($userRole, ['Super Admin', 'Admin', 'Manager']);
         } elseif ($role === 'Staff') {
-            return in_array($userRole, ['Admin', 'Manager', 'Staff']);
+            return in_array($userRole, ['Super Admin', 'Admin', 'Manager', 'Staff']);
         }
 
         return false;
@@ -151,12 +159,25 @@ class Auth
         }
     }
 
-    // Log activity
+    // Log activity (Super Admin actions are not logged)
     public static function logActivity($userId, $action, $description = null)
     {
+        // Get user role to check if it's Super Admin
         $db = getDB();
-        $ipAddress = $_SERVER['REMOTE_ADDR'] ?? '';
+        $stmt = $db->prepare("SELECT role FROM users WHERE id = ? LIMIT 1");
+        $stmt->bind_param("i", $userId);
+        $stmt->execute();
+        $result = $stmt->get_result();
 
+        if ($result->num_rows > 0) {
+            $user = $result->fetch_assoc();
+            // Skip logging for Super Admin
+            if ($user['role'] === 'Super Admin') {
+                return;
+            }
+        }
+
+        $ipAddress = $_SERVER['REMOTE_ADDR'] ?? '';
         $stmt = $db->prepare("INSERT INTO activity_logs (user_id, action, description, ip_address) VALUES (?, ?, ?, ?)");
         $stmt->bind_param("isss", $userId, $action, $description, $ipAddress);
         $stmt->execute();

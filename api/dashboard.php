@@ -25,8 +25,8 @@ try {
             $branchParams = [];
             $branchParamTypes = '';
 
-            // Priority: Admin can select any branch via dropdown, Manager restricted to their branch
-            if ($userRole === 'Admin' && $selectedBranchId) {
+            // Priority: Super Admin and Admin can select any branch via dropdown, Manager restricted to their branch
+            if (($userRole === 'Super Admin' || $userRole === 'Admin') && $selectedBranchId) {
                 // Admin selected a specific branch from dropdown
                 $branchCondition = " AND branch_id = ?";
                 $branchParams[] = $selectedBranchId;
@@ -40,7 +40,7 @@ try {
 
             // Add data isolation for non-Admin users
             $dataIsolationCondition = '';
-            if ($userRole !== 'Admin') {
+            if ($userRole !== 'Super Admin' && $userRole !== 'Admin') {
                 $dataIsolationCondition = " AND created_by = ?";
                 $branchParams[] = $currentUserId;
                 $branchParamTypes .= 'i';
@@ -74,13 +74,13 @@ try {
             $consoleQuery = "SELECT COUNT(*) as active_consoles FROM gaming_sessions gs 
                             LEFT JOIN consoles c ON gs.console_id = c.id 
                             WHERE gs.status IN ('active', 'paused')";
-            if (($userRole === 'Admin' && $selectedBranchId) || ($isManagerRestricted && $userBranchId)) {
-                $branchIdToUse = ($userRole === 'Admin' && $selectedBranchId) ? $selectedBranchId : $userBranchId;
+            if ((($userRole === 'Super Admin' || $userRole === 'Admin') && $selectedBranchId) || ($isManagerRestricted && $userBranchId)) {
+                $branchIdToUse = (($userRole === 'Super Admin' || $userRole === 'Admin') && $selectedBranchId) ? $selectedBranchId : $userBranchId;
                 $consoleQuery .= " AND c.branch_id = ?";
             }
             $consoleStmt = $db->prepare($consoleQuery);
-            if (($userRole === 'Admin' && $selectedBranchId) || ($isManagerRestricted && $userBranchId)) {
-                $branchIdToUse = ($userRole === 'Admin' && $selectedBranchId) ? $selectedBranchId : $userBranchId;
+            if ((($userRole === 'Super Admin' || $userRole === 'Admin') && $selectedBranchId) || ($isManagerRestricted && $userBranchId)) {
+                $branchIdToUse = (($userRole === 'Super Admin' || $userRole === 'Admin') && $selectedBranchId) ? $selectedBranchId : $userBranchId;
                 $consoleStmt->bind_param("i", $branchIdToUse);
             }
             $consoleStmt->execute();
@@ -102,13 +102,13 @@ try {
 
             // Calculate utilization percentage
             $totalConsolesQuery = "SELECT COUNT(*) as total FROM consoles WHERE status != 'Maintenance'";
-            if (($userRole === 'Admin' && $selectedBranchId) || ($isManagerRestricted && $userBranchId)) {
-                $branchIdToUse = ($userRole === 'Admin' && $selectedBranchId) ? $selectedBranchId : $userBranchId;
+            if ((($userRole === 'Super Admin' || $userRole === 'Admin') && $selectedBranchId) || ($isManagerRestricted && $userBranchId)) {
+                $branchIdToUse = (($userRole === 'Super Admin' || $userRole === 'Admin') && $selectedBranchId) ? $selectedBranchId : $userBranchId;
                 $totalConsolesQuery .= " AND branch_id = ?";
             }
             $totalConsolesStmt = $db->prepare($totalConsolesQuery);
-            if (($userRole === 'Admin' && $selectedBranchId) || ($isManagerRestricted && $userBranchId)) {
-                $branchIdToUse = ($userRole === 'Admin' && $selectedBranchId) ? $selectedBranchId : $userBranchId;
+            if ((($userRole === 'Super Admin' || $userRole === 'Admin') && $selectedBranchId) || ($isManagerRestricted && $userBranchId)) {
+                $branchIdToUse = (($userRole === 'Super Admin' || $userRole === 'Admin') && $selectedBranchId) ? $selectedBranchId : $userBranchId;
                 $totalConsolesStmt->bind_param("i", $branchIdToUse);
             }
             $totalConsolesStmt->execute();
@@ -136,14 +136,14 @@ try {
                 LEFT JOIN consoles c ON gs.console_id = c.id
                 WHERE gs.status IN ('active', 'paused')";
 
-            if (($userRole === 'Admin' && $selectedBranchId) || ($isManagerRestricted && $userBranchId)) {
-                $branchIdToUse = ($userRole === 'Admin' && $selectedBranchId) ? $selectedBranchId : $userBranchId;
+            if ((($userRole === 'Super Admin' || $userRole === 'Admin') && $selectedBranchId) || ($isManagerRestricted && $userBranchId)) {
+                $branchIdToUse = (($userRole === 'Super Admin' || $userRole === 'Admin') && $selectedBranchId) ? $selectedBranchId : $userBranchId;
                 $uptimeQuery .= " AND c.branch_id = ?";
             }
 
             $uptimeStmt = $db->prepare($uptimeQuery);
-            if (($userRole === 'Admin' && $selectedBranchId) || ($isManagerRestricted && $userBranchId)) {
-                $branchIdToUse = ($userRole === 'Admin' && $selectedBranchId) ? $selectedBranchId : $userBranchId;
+            if ((($userRole === 'Super Admin' || $userRole === 'Admin') && $selectedBranchId) || ($isManagerRestricted && $userBranchId)) {
+                $branchIdToUse = (($userRole === 'Super Admin' || $userRole === 'Admin') && $selectedBranchId) ? $selectedBranchId : $userBranchId;
                 $uptimeStmt->bind_param("i", $branchIdToUse);
             }
             $uptimeStmt->execute();
@@ -185,8 +185,8 @@ try {
             $branchParams = [];
             $branchParamTypes = '';
 
-            // Priority: Admin can select any branch via dropdown, Manager restricted to their branch
-            if ($userRole === 'Admin' && $selectedBranchId) {
+            // Priority: Super Admin and Admin can select any branch via dropdown, Manager restricted to their branch
+            if (($userRole === 'Super Admin' || $userRole === 'Admin') && $selectedBranchId) {
                 // Admin selected a specific branch from dropdown
                 $branchCondition = " AND branch_id = ?";
                 $branchParams[] = $selectedBranchId;
@@ -200,7 +200,7 @@ try {
 
             // Add data isolation for non-Admin users
             $dataIsolationCondition = '';
-            if ($userRole !== 'Admin') {
+            if ($userRole !== 'Super Admin' && $userRole !== 'Admin') {
                 $dataIsolationCondition = " AND created_by = ?";
                 $branchParams[] = $currentUserId;
                 $branchParamTypes .= 'i';
@@ -246,7 +246,7 @@ try {
                 ]
             ]);
         } elseif ($action === 'activity-logs') {
-            // Restrict activity logs to Admin only
+            // Restrict activity logs to Super Admin and Admin only
             if (!Auth::hasRole('Admin')) {
                 echo json_encode(['success' => false, 'message' => 'Access denied. Admin privileges required.']);
                 exit;

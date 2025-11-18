@@ -10,7 +10,11 @@ error_log("Branches API - GET params: " . json_encode($_GET));
 error_log("Branches API - POST data: " . file_get_contents('php://input'));
 
 Auth::require();
-Auth::requireRole('Admin'); // Only admins can manage branches
+// Only Super Admin and Admin can manage branches
+if (!Auth::hasRole('Admin')) {
+    echo json_encode(['success' => false, 'message' => 'Access denied. Admin or Super Admin privileges required.']);
+    exit;
+}
 
 $db = getDB();
 $method = $_SERVER['REQUEST_METHOD'];
@@ -46,8 +50,8 @@ try {
                     echo json_encode(['success' => false, 'message' => 'Branch not found']);
                 }
             } elseif ($action === 'managers') {
-                // Get list of users who can be managers (Admin or Manager role)
-                $stmt = $db->prepare("SELECT id, full_name, username FROM users WHERE role IN ('Admin', 'Manager') AND status = 'Active' ORDER BY full_name");
+                // Get list of users who can be managers (Super Admin, Admin or Manager role)
+                $stmt = $db->prepare("SELECT id, full_name, username FROM users WHERE role IN ('Super Admin', 'Admin', 'Manager') AND status = 'Active' ORDER BY full_name");
                 $stmt->execute();
                 $result = $stmt->get_result();
                 $managers = [];

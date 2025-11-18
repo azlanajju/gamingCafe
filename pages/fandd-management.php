@@ -166,7 +166,7 @@ require_once __DIR__ . '/../includes/header.php';
                                 <p class="item-branch">Branch: ${item.branch_name || 'Unknown'} - ${item.branch_location || 'Unknown'}</p>
                                 ${item.description ? `<p class="item-description">${item.description}</p>` : ''}
                             </div>
-                            ${USER_ROLE === 'Admin' || USER_ROLE === 'Manager' ? `
+                            ${(USER_ROLE === 'Super Admin' || USER_ROLE === 'Admin' || USER_ROLE === 'Manager') ? `
                             <div class="item-actions">
                                 <button class="btn btn--sm btn--primary" onclick="editItem(${item.id})">Edit</button>
                                 <button class="btn btn--sm btn--danger" onclick="deleteItem(${item.id})">Delete</button>

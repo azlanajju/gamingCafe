@@ -137,7 +137,7 @@ require_once __DIR__ . '/../includes/header.php';
         let url = `${SITE_URL}/api/dashboard.php?action=stats&period=${currentDashboardPeriod}`;
 
         // Add branch filter if a specific branch is selected
-        if (selectedBranchId && USER_ROLE === 'Admin') {
+        if (selectedBranchId && (USER_ROLE === 'Super Admin' || USER_ROLE === 'Admin')) {
             url += `&branch_id=${selectedBranchId}`;
         }
 
@@ -169,7 +169,7 @@ require_once __DIR__ . '/../includes/header.php';
             .catch(err => console.error('Error loading stats:', err));
 
         // Load charts data only for Admin/Manager
-        if (USER_ROLE === 'Admin' || USER_ROLE === 'Manager') {
+        if (USER_ROLE === 'Super Admin' || USER_ROLE === 'Admin' || USER_ROLE === 'Manager') {
             loadCharts();
         }
     }
@@ -181,7 +181,7 @@ require_once __DIR__ . '/../includes/header.php';
         let url = `${SITE_URL}/api/dashboard.php?action=charts&period=${currentDashboardPeriod}`;
 
         // Add branch filter if a specific branch is selected
-        if (selectedBranchId && USER_ROLE === 'Admin') {
+        if (selectedBranchId && (USER_ROLE === 'Super Admin' || USER_ROLE === 'Admin')) {
             url += `&branch_id=${selectedBranchId}`;
         }
 
@@ -429,7 +429,7 @@ require_once __DIR__ . '/../includes/header.php';
     // Load activity logs
     function loadActivityLogs() {
         // Only load activity logs for Admin
-        if (USER_ROLE !== 'Admin') {
+        if (USER_ROLE !== 'Super Admin' && USER_ROLE !== 'Admin') {
             return;
         }
 

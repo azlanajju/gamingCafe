@@ -31,10 +31,10 @@ try {
                          WHERE 1=1";
 
                 // Add data isolation for non-Admin users
-                if ($userRole !== 'Admin') {
+                if ($userRole !== 'Super Admin' && $userRole !== 'Admin') {
                     if ($userRole === 'Manager') {
                         // For Managers: show transactions from their branch that are NOT created by Admins
-                        $query .= " AND t.branch_id = ? AND t.created_by NOT IN (SELECT id FROM users WHERE role = 'Admin')";
+                        $query .= " AND t.branch_id = ? AND t.created_by NOT IN (SELECT id FROM users WHERE role IN ('Super Admin', 'Admin'))";
                         $userBranchId = Auth::userBranchId();
                         $params[] = $userBranchId;
                         $types .= "i";
@@ -260,6 +260,13 @@ try {
             $action = $data['action'] ?? '';
 
             if ($action === 'delete') {
+                // Only Super Admin can delete transactions
+                $userRole = Auth::userRole();
+                if ($userRole !== 'Super Admin') {
+                    echo json_encode(['success' => false, 'message' => 'Access denied. Only Super Admin can delete transactions.']);
+                    break;
+                }
+
                 $transactionId = $data['transaction_id'] ?? null;
 
                 if (!$transactionId) {
@@ -292,11 +299,11 @@ try {
                     $stmt->bind_param("i", $transactionId);
 
                     if ($stmt->execute()) {
-                        // Log the activity
-                        $logStmt = $db->prepare("INSERT INTO activity_logs (user_id, action, description, created_at) VALUES (?, 'delete', ?, CURRENT_TIMESTAMP)");
-                        $description = "Deleted transaction ID: {$transactionId} for customer: {$transaction['customer_name']} (₹" . number_format($transaction['total_amount'], 2) . ")";
-                        $logStmt->bind_param("is", Auth::userId(), $description);
-                        $logStmt->execute();
+                        // Log the activity (skip for Super Admin)
+                        $userRole = Auth::userRole();
+                        if ($userRole !== 'Super Admin') {
+                            Auth::logActivity(Auth::userId(), 'transaction_delete', "Deleted transaction ID: {$transactionId} for customer: {$transaction['customer_name']} (₹" . number_format($transaction['total_amount'], 2) . ")");
+                        }
 
                         $db->commit();
                         echo json_encode(['success' => true, 'message' => 'Transaction deleted successfully']);

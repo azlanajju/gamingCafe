@@ -260,8 +260,8 @@ require_once __DIR__ . '/../includes/header.php';
     /* Actions */
     .data-table th:nth-child(13),
     .data-table td:nth-child(13) {
-        width: 100px;
-        min-width: 100px;
+        width: 150px;
+        min-width: 150px;
     }
 
     /* Delete */
@@ -325,10 +325,49 @@ require_once __DIR__ . '/../includes/header.php';
     /* Compact Action Buttons */
     .action-buttons {
         display: flex;
-        gap: 4px;
+        gap: 6px;
         flex-wrap: nowrap;
-        justify-content: flex-start;
+        justify-content: center;
         align-items: center;
+    }
+
+    .action-buttons .btn {
+        font-size: 16px;
+        padding: 6px 10px;
+        min-width: 36px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+    }
+
+    .action-buttons .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .action-buttons .btn-secondary {
+        background: var(--color-info);
+        color: var(--color-white);
+        border: 1px solid var(--color-info);
+    }
+
+    .action-buttons .btn-secondary:hover {
+        background: var(--color-info);
+        opacity: 0.9;
+    }
+
+    .action-buttons .btn-danger {
+        background: var(--color-error);
+        color: var(--color-white);
+        border: 1px solid var(--color-error);
+    }
+
+    .action-buttons .btn-danger:hover {
+        background: var(--color-error);
+        opacity: 0.9;
     }
 
     .payment-breakdown {
@@ -362,6 +401,14 @@ require_once __DIR__ . '/../includes/header.php';
         box-shadow: var(--shadow-xs);
         min-width: 28px;
         height: 24px;
+    }
+
+    /* Override for action buttons in table */
+    .action-buttons .btn {
+        font-size: 16px;
+        padding: 6px 10px;
+        min-width: 36px;
+        height: 32px;
     }
 
     .btn::before {
@@ -914,11 +961,16 @@ require_once __DIR__ . '/../includes/header.php';
             <td>${txn.user_name || '-'}</td>
             <td class="action-buttons">
                 <button class="btn btn-sm btn-secondary" onclick="viewTransaction(${txn.id})" title="View Details">
-                    View
+                    👁️
                 </button>
                 <button class="btn btn-sm btn-secondary" onclick="printTransaction(${txn.id})" title="Print Receipt">
-                    Print
+                    🖨️
                 </button>
+                ${USER_ROLE === 'Super Admin' ? `
+                <button class="btn btn-sm btn-danger" onclick="deleteTransaction(${txn.id})" title="Delete Transaction">
+                    🗑️
+                </button>
+                ` : ''}
             </td>
         `;
             tbody.appendChild(tr);

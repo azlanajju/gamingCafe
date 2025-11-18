@@ -79,9 +79,9 @@ $currentUser = Auth::user();
                     }
                 }
 
-                // Load branches for dropdown (Admin only)
+                // Load branches for dropdown (Super Admin and Admin only)
                 async function loadBranches() {
-                    if (USER_ROLE !== 'Admin') {
+                    if (USER_ROLE !== 'Super Admin' && USER_ROLE !== 'Admin') {
                         console.log('Not an Admin, skipping branch loading');
                         return;
                     }
@@ -156,7 +156,7 @@ $currentUser = Auth::user();
 
                 // Function to restore branch selection (can be called from any page)
                 function restoreBranchSelection() {
-                    if (USER_ROLE !== 'Admin') return;
+                    if (USER_ROLE !== 'Super Admin' && USER_ROLE !== 'Admin') return;
 
                     const branchSelector = document.getElementById('topbar-branch-selector');
                     if (branchSelector) {
