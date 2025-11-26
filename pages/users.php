@@ -109,6 +109,9 @@ if (!Auth::hasRole('Admin') && !Auth::hasRole('Manager')) {
 </div>
 
 <script>
+    // Get current user role from PHP
+    const CURRENT_USER_ROLE = '<?php echo Auth::userRole(); ?>';
+
     // Load branches
     function loadUserBranches() {
         fetch(`${SITE_URL}/api/users.php?action=branches`)
@@ -140,6 +143,16 @@ if (!Auth::hasRole('Admin') && !Auth::hasRole('Manager')) {
                     tbody.innerHTML = '';
 
                     result.data.forEach(user => {
+                        // Filter out Super Admins if current user is Admin (not Super Admin)
+                        if (CURRENT_USER_ROLE === 'Admin' && user.role === 'Super Admin') {
+                            return; // Skip this user
+                        }
+
+                        // Filter out Admins and Super Admins if current user is Manager
+                        if (CURRENT_USER_ROLE === 'Manager' && (user.role === 'Admin' || user.role === 'Super Admin')) {
+                            return; // Skip this user
+                        }
+
                         const tr = document.createElement('tr');
                         tr.innerHTML = `
                         <td>${user.id}</td>
@@ -222,6 +235,18 @@ if (!Auth::hasRole('Admin') && !Auth::hasRole('Manager')) {
                 if (result.success) {
                     const user = result.data.find(u => u.id == id);
                     if (user) {
+                        // Prevent editing Super Admin users if current user is Admin
+                        if (CURRENT_USER_ROLE === 'Admin' && user.role === 'Super Admin') {
+                            alert('You cannot edit Super Admin users');
+                            return;
+                        }
+
+                        // Prevent editing Admin and Super Admin users if current user is Manager
+                        if (CURRENT_USER_ROLE === 'Manager' && (user.role === 'Admin' || user.role === 'Super Admin')) {
+                            alert('You cannot edit Admin or Super Admin users');
+                            return;
+                        }
+
                         document.getElementById('user-modal-title').textContent = 'Edit User';
                         document.getElementById('user-id').value = user.id;
                         document.getElementById('user-fullname').value = user.full_name;
@@ -229,28 +254,8 @@ if (!Auth::hasRole('Admin') && !Auth::hasRole('Manager')) {
                         document.getElementById('user-email').value = user.email;
                         document.getElementById('user-phone').value = user.phone;
 
-                        // Handle role selection based on user permissions
                         const roleSelect = document.getElementById('user-role');
-                        const currentRole = user.role;
-
-                        // For managers, ensure they can't change to Admin or Super Admin role
-                        <?php
-                        $currentUserRole = Auth::userRole();
-                        if ($currentUserRole !== 'Super Admin' && !Auth::hasRole('Admin')): ?>
-                            if (currentRole === 'Admin' || currentRole === 'Super Admin') {
-                                // If current user is Admin/Super Admin but logged in user is Manager, don't allow editing
-                                alert('You cannot edit Admin or Super Admin users');
-                                return;
-                            }
-                        <?php elseif ($currentUserRole !== 'Super Admin'): ?>
-                            // Only Super Admin can edit Super Admin users
-                            if (currentRole === 'Super Admin') {
-                                alert('Only Super Admin can edit Super Admin users');
-                                return;
-                            }
-                        <?php endif; ?>
-
-                        roleSelect.value = currentRole;
+                        roleSelect.value = user.role;
 
                         const branchElement = document.getElementById('user-branch');
                         if (branchElement) {
