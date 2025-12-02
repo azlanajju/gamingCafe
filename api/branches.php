@@ -51,7 +51,18 @@ try {
                 }
             } elseif ($action === 'managers') {
                 // Get list of users who can be managers (Super Admin, Admin or Manager role)
-                $stmt = $db->prepare("SELECT id, full_name, username FROM users WHERE role IN ('Super Admin', 'Admin', 'Manager') AND status = 'Active' ORDER BY full_name");
+                // If current user is not Super Admin, exclude Super Admin from the list
+                $currentUserRole = Auth::userRole();
+                $isSuperAdmin = ($currentUserRole === 'Super Admin');
+
+                if ($isSuperAdmin) {
+                    // Super Admin can see all managers including other Super Admins
+                    $stmt = $db->prepare("SELECT id, full_name, username FROM users WHERE role IN ('Super Admin', 'Admin', 'Manager') AND status = 'Active' ORDER BY full_name");
+                } else {
+                    // Normal admins should not see Super Admin in the dropdown
+                    $stmt = $db->prepare("SELECT id, full_name, username FROM users WHERE role IN ('Admin', 'Manager') AND status = 'Active' ORDER BY full_name");
+                }
+
                 $stmt->execute();
                 $result = $stmt->get_result();
                 $managers = [];

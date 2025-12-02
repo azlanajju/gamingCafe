@@ -759,8 +759,6 @@ class GameCafeApp {
       resetStatsBtn.addEventListener("click", () => this.resetStats());
     }
 
-
-
     // Logout
     const logoutBtn = document.getElementById("logout-btn");
     if (logoutBtn) {
@@ -3801,16 +3799,37 @@ class GameCafeApp {
     const playerKey = players === 1 ? "1player" : players + "players";
     const elapsedMinutes = Math.ceil(durationSeconds / 60);
 
+    // Helper function to round up to nearest available pricing tier
+    const roundUpToNearestTier = (mins) => {
+      // Available tiers: 15, 30, 45, 60 minutes
+      const availableTiers = [15, 30, 45, 60];
+
+      // Find the smallest tier that is >= mins
+      for (const tier of availableTiers) {
+        if (tier >= mins) {
+          return tier;
+        }
+      }
+
+      // If mins exceeds all tiers, return the largest tier
+      return 60;
+    };
+
     let baseAmount = 0;
 
-    if (elapsedMinutes <= 15) {
-      baseAmount = rateTable[playerKey]?.["15min"] || 0;
-    } else if (elapsedMinutes <= 30) {
-      baseAmount = rateTable[playerKey]?.["30min"] || 0;
-    } else if (elapsedMinutes <= 45) {
-      baseAmount = rateTable[playerKey]?.["45min"] || 0;
-    } else if (elapsedMinutes <= 60) {
-      baseAmount = rateTable[playerKey]?.["60min"] || 0;
+    if (elapsedMinutes <= 60) {
+      // For sessions <= 60 minutes, round up to nearest tier
+      const billedMinutes = roundUpToNearestTier(elapsedMinutes);
+
+      if (billedMinutes === 15) {
+        baseAmount = rateTable[playerKey]?.["15min"] || 0;
+      } else if (billedMinutes === 30) {
+        baseAmount = rateTable[playerKey]?.["30min"] || 0;
+      } else if (billedMinutes === 45) {
+        baseAmount = rateTable[playerKey]?.["45min"] || 0;
+      } else {
+        baseAmount = rateTable[playerKey]?.["60min"] || 0;
+      }
     } else {
       // ✅ Beyond 60 minutes (multi-hour support)
       const fullHours = Math.floor(elapsedMinutes / 60);
@@ -3819,15 +3838,19 @@ class GameCafeApp {
       // Full hours charge
       baseAmount = fullHours * (rateTable[playerKey]?.["60min"] || 0);
 
-      // ✅ Remainder slab (inclusive checks)
-      if (remainder > 0 && remainder <= 15) {
-        baseAmount += rateTable[playerKey]?.["15min"] || 0;
-      } else if (remainder > 15 && remainder <= 30) {
-        baseAmount += rateTable[playerKey]?.["30min"] || 0;
-      } else if (remainder > 30 && remainder <= 45) {
-        baseAmount += rateTable[playerKey]?.["45min"] || 0;
-      } else if (remainder > 45) {
-        baseAmount += rateTable[playerKey]?.["60min"] || 0;
+      // ✅ Round up remainder to nearest tier and charge
+      if (remainder > 0) {
+        const billedRemainder = roundUpToNearestTier(remainder);
+
+        if (billedRemainder === 15) {
+          baseAmount += rateTable[playerKey]?.["15min"] || 0;
+        } else if (billedRemainder === 30) {
+          baseAmount += rateTable[playerKey]?.["30min"] || 0;
+        } else if (billedRemainder === 45) {
+          baseAmount += rateTable[playerKey]?.["45min"] || 0;
+        } else {
+          baseAmount += rateTable[playerKey]?.["60min"] || 0;
+        }
       }
     }
 
@@ -4663,8 +4686,6 @@ class GameCafeApp {
       }, 300);
     }, 3000);
   }
-
-
 
   // Placeholder methods for remaining functionality
   renderGames() {

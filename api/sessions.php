@@ -1308,31 +1308,98 @@ class SessionManager
             ];
         }
 
+        // Helper function to round up to nearest available pricing tier
+        // Available tiers: 15, 30, 60 minutes (and 45 if it exists)
+        $roundUpToNearestTier = function ($mins) use ($pricing) {
+            // Check which pricing tiers are available
+            $availableTiers = [];
+            if (isset($pricing['duration_15']) && $pricing['duration_15'] > 0) {
+                $availableTiers[] = 15;
+            }
+            if (isset($pricing['duration_30']) && $pricing['duration_30'] > 0) {
+                $availableTiers[] = 30;
+            }
+            if (isset($pricing['duration_45']) && $pricing['duration_45'] > 0) {
+                $availableTiers[] = 45;
+            }
+            if (isset($pricing['duration_60']) && $pricing['duration_60'] > 0) {
+                $availableTiers[] = 60;
+            }
+
+            // If no tiers available, default to 60
+            if (empty($availableTiers)) {
+                return 60;
+            }
+
+            // Sort tiers in ascending order
+            sort($availableTiers);
+
+            // Find the smallest tier that is >= $mins
+            foreach ($availableTiers as $tier) {
+                if ($tier >= $mins) {
+                    return $tier;
+                }
+            }
+
+            // If $mins exceeds all tiers, return the largest tier
+            return max($availableTiers);
+        };
+
         // Calculate billing based on duration brackets
         $total_amount = 0;
         $breakdown = [];
 
-        // Handle different duration brackets
-        if ($minutes <= 15) {
-            $total_amount = $pricing['duration_15'] ?? 0;
-            $breakdown['15_min'] = $total_amount;
-        } elseif ($minutes <= 30) {
-            $total_amount = $pricing['duration_30'] ?? 0;
-            $breakdown['30_min'] = $total_amount;
-        } elseif ($minutes <= 45) {
-            $total_amount = $pricing['duration_45'] ?? 0;
-            $breakdown['45_min'] = $total_amount;
-        } else {
-            $total_amount = $pricing['duration_60'] ?? 0;
-            $breakdown['60_min'] = $total_amount;
+        // For sessions <= 60 minutes, round up to nearest tier
+        if ($minutes <= 60) {
+            $billedMinutes = $roundUpToNearestTier($minutes);
 
-            // For sessions longer than 60 minutes, add additional hourly charges
-            if ($minutes > 60) {
-                $additional_hours = ceil(($minutes - 60) / 60);
-                $hourly_rate = $pricing['duration_60'] ?? 0;
-                $additional_amount = $additional_hours * $hourly_rate;
-                $total_amount += $additional_amount;
-                $breakdown['additional_hours'] = $additional_amount;
+            if ($billedMinutes == 15) {
+                $total_amount = $pricing['duration_15'] ?? 0;
+                $breakdown['15_min'] = $total_amount;
+            } elseif ($billedMinutes == 30) {
+                $total_amount = $pricing['duration_30'] ?? 0;
+                $breakdown['30_min'] = $total_amount;
+            } elseif ($billedMinutes == 45) {
+                $total_amount = $pricing['duration_45'] ?? 0;
+                $breakdown['45_min'] = $total_amount;
+            } else {
+                $total_amount = $pricing['duration_60'] ?? 0;
+                $breakdown['60_min'] = $total_amount;
+            }
+        } else {
+            // For sessions longer than 60 minutes
+            // Calculate full hours
+            $fullHours = floor($minutes / 60);
+            $remainderMinutes = $minutes % 60;
+
+            // Charge for full hours
+            $hourlyRate = $pricing['duration_60'] ?? 0;
+            $total_amount = $fullHours * $hourlyRate;
+            $breakdown['full_hours'] = [
+                'hours' => $fullHours,
+                'rate' => $hourlyRate,
+                'amount' => $total_amount
+            ];
+
+            // Round up remainder to nearest tier and add charge
+            if ($remainderMinutes > 0) {
+                $billedRemainder = $roundUpToNearestTier($remainderMinutes);
+
+                if ($billedRemainder == 15) {
+                    $remainderAmount = $pricing['duration_15'] ?? 0;
+                    $breakdown['remainder_15_min'] = $remainderAmount;
+                } elseif ($billedRemainder == 30) {
+                    $remainderAmount = $pricing['duration_30'] ?? 0;
+                    $breakdown['remainder_30_min'] = $remainderAmount;
+                } elseif ($billedRemainder == 45) {
+                    $remainderAmount = $pricing['duration_45'] ?? 0;
+                    $breakdown['remainder_45_min'] = $remainderAmount;
+                } else {
+                    $remainderAmount = $pricing['duration_60'] ?? 0;
+                    $breakdown['remainder_60_min'] = $remainderAmount;
+                }
+
+                $total_amount += $remainderAmount;
             }
         }
 
