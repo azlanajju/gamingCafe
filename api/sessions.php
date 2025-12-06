@@ -1308,9 +1308,13 @@ class SessionManager
             ];
         }
 
-        // Helper function to round up to nearest available pricing tier
-        // Available tiers: 15, 30, 60 minutes (and 45 if it exists)
-        $roundUpToNearestTier = function ($mins) use ($pricing) {
+        // Grace period: 5 minutes
+        $gracePeriod = 5;
+
+        // Helper function to calculate billing tier with grace period
+        // Logic: If playtime is within tier + 5 minutes, charge for that tier
+        // Otherwise, round up to next tier
+        $calculateBillingTier = function ($mins) use ($pricing, $gracePeriod) {
             // Check which pricing tiers are available
             $availableTiers = [];
             if (isset($pricing['duration_15']) && $pricing['duration_15'] > 0) {
@@ -1334,14 +1338,28 @@ class SessionManager
             // Sort tiers in ascending order
             sort($availableTiers);
 
-            // Find the smallest tier that is >= $mins
-            foreach ($availableTiers as $tier) {
-                if ($tier >= $mins) {
+            // Check each tier with grace period (from smallest to largest)
+            for ($i = 0; $i < count($availableTiers); $i++) {
+                $tier = $availableTiers[$i];
+
+                // If playtime is within this tier + grace period, charge for this tier
+                if ($mins <= $tier + $gracePeriod) {
                     return $tier;
+                }
+
+                // If this is the last tier, return it
+                if ($i === count($availableTiers) - 1) {
+                    return $tier;
+                }
+
+                // Check if we need to round up to next tier
+                $nextTier = $availableTiers[$i + 1];
+                if ($mins > $tier + $gracePeriod && $mins <= $nextTier + $gracePeriod) {
+                    return $nextTier;
                 }
             }
 
-            // If $mins exceeds all tiers, return the largest tier
+            // Fallback: return the largest tier
             return max($availableTiers);
         };
 
@@ -1349,9 +1367,20 @@ class SessionManager
         $total_amount = 0;
         $breakdown = [];
 
-        // For sessions <= 60 minutes, round up to nearest tier
+        // Starting grace period: If playtime is 0-5 minutes, no charge
+        if ($minutes <= $gracePeriod) {
+            $breakdown['grace_period'] = 0;
+            return [
+                'total_amount' => 0,
+                'breakdown' => $breakdown,
+                'duration_minutes' => $minutes,
+                'pricing_used' => $pricing
+            ];
+        }
+
+        // For sessions <= 60 minutes
         if ($minutes <= 60) {
-            $billedMinutes = $roundUpToNearestTier($minutes);
+            $billedMinutes = $calculateBillingTier($minutes);
 
             if ($billedMinutes == 15) {
                 $total_amount = $pricing['duration_15'] ?? 0;
@@ -1381,9 +1410,11 @@ class SessionManager
                 'amount' => $total_amount
             ];
 
-            // Round up remainder to nearest tier and add charge
-            if ($remainderMinutes > 0) {
-                $billedRemainder = $roundUpToNearestTier($remainderMinutes);
+            // Calculate remainder with grace period
+            // If remainder is within grace period (0-5 mins), no extra charge
+            // Otherwise, apply grace period logic
+            if ($remainderMinutes > $gracePeriod) {
+                $billedRemainder = $calculateBillingTier($remainderMinutes);
 
                 if ($billedRemainder == 15) {
                     $remainderAmount = $pricing['duration_15'] ?? 0;
@@ -1400,6 +1431,9 @@ class SessionManager
                 }
 
                 $total_amount += $remainderAmount;
+            } else {
+                // Remainder is within grace period (0-5 mins), no extra charge
+                $breakdown['remainder_grace'] = 0;
             }
         }
 

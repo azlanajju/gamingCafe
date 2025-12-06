@@ -3799,27 +3799,55 @@ class GameCafeApp {
     const playerKey = players === 1 ? "1player" : players + "players";
     const elapsedMinutes = Math.ceil(durationSeconds / 60);
 
-    // Helper function to round up to nearest available pricing tier
-    const roundUpToNearestTier = (mins) => {
+    // Grace period: 5 minutes
+    const gracePeriod = 5;
+
+    // Helper function to calculate billing tier with grace period
+    // Logic: If playtime is within tier + 5 minutes, charge for that tier
+    // Otherwise, round up to next tier
+    const calculateBillingTier = (mins) => {
       // Available tiers: 15, 30, 45, 60 minutes
       const availableTiers = [15, 30, 45, 60];
 
-      // Find the smallest tier that is >= mins
-      for (const tier of availableTiers) {
-        if (tier >= mins) {
+      // Check each tier with grace period (from smallest to largest)
+      for (let i = 0; i < availableTiers.length; i++) {
+        const tier = availableTiers[i];
+
+        // If playtime is within this tier + grace period, charge for this tier
+        if (mins <= tier + gracePeriod) {
           return tier;
+        }
+
+        // If this is the last tier, return it
+        if (i === availableTiers.length - 1) {
+          return tier;
+        }
+
+        // Check if we need to round up to next tier
+        const nextTier = availableTiers[i + 1];
+        if (mins > tier + gracePeriod && mins <= nextTier + gracePeriod) {
+          return nextTier;
         }
       }
 
-      // If mins exceeds all tiers, return the largest tier
+      // Fallback: return the largest tier
       return 60;
     };
 
     let baseAmount = 0;
 
+    // Starting grace period: If playtime is 0-5 minutes, no charge
+    if (elapsedMinutes <= gracePeriod) {
+      return {
+        baseAmount: 0,
+        amount: 0,
+        multipliers: [],
+      };
+    }
+
     if (elapsedMinutes <= 60) {
-      // For sessions <= 60 minutes, round up to nearest tier
-      const billedMinutes = roundUpToNearestTier(elapsedMinutes);
+      // For sessions <= 60 minutes, calculate billing tier with grace period
+      const billedMinutes = calculateBillingTier(elapsedMinutes);
 
       if (billedMinutes === 15) {
         baseAmount = rateTable[playerKey]?.["15min"] || 0;
@@ -3838,9 +3866,11 @@ class GameCafeApp {
       // Full hours charge
       baseAmount = fullHours * (rateTable[playerKey]?.["60min"] || 0);
 
-      // ✅ Round up remainder to nearest tier and charge
-      if (remainder > 0) {
-        const billedRemainder = roundUpToNearestTier(remainder);
+      // ✅ Calculate remainder with grace period
+      // If remainder is within grace period (0-5 mins), no extra charge
+      // Otherwise, apply grace period logic
+      if (remainder > gracePeriod) {
+        const billedRemainder = calculateBillingTier(remainder);
 
         if (billedRemainder === 15) {
           baseAmount += rateTable[playerKey]?.["15min"] || 0;
@@ -3852,6 +3882,7 @@ class GameCafeApp {
           baseAmount += rateTable[playerKey]?.["60min"] || 0;
         }
       }
+      // If remainder <= 5, no extra charge (grace period)
     }
 
     // ======================
