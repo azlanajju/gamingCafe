@@ -185,6 +185,158 @@ try {
                 } else {
                     echo json_encode(['success' => false, 'message' => 'Failed to update item']);
                 }
+            } elseif ($action === 'process_billing') {
+                // Process F&D-only billing
+                $input = json_decode(file_get_contents('php://input'), true);
+
+                $customer_name = $input['customer_name'] ?? 'Walk-in Customer';
+                $customer_number = $input['customer_number'] ?? '';
+                $items = $input['items'] ?? [];
+                $fandd_amount = floatval($input['fandd_amount'] ?? 0);
+                $tax_amount = floatval($input['tax_amount'] ?? 0);
+                $total_amount = floatval($input['total_amount'] ?? 0);
+                $final_amount = floatval($input['final_amount'] ?? $total_amount);
+                $payment_method = $input['payment_method'] ?? 'cash';
+                $payment_details = $input['payment_details'] ?? null;
+                $branch_id = intval($input['branch_id'] ?? 1);
+
+                // Check if user is a manager and should be restricted to their branch
+                $userBranchId = Auth::userBranchId();
+                $isManagerRestricted = Auth::isManagerRestricted();
+
+                if ($isManagerRestricted && $userBranchId) {
+                    $branch_id = $userBranchId;
+                }
+
+                if (empty($items)) {
+                    echo json_encode(['success' => false, 'message' => 'No items in cart']);
+                    break;
+                }
+
+                if ($total_amount <= 0) {
+                    echo json_encode(['success' => false, 'message' => 'Total amount must be greater than 0']);
+                    break;
+                }
+
+                // Start transaction
+                $db->begin_transaction();
+
+                try {
+                    // Validate stock and reduce stock for each item
+                    foreach ($items as $item) {
+                        $item_id = intval($item['fandd_item_id'] ?? 0);
+                        $quantity = intval($item['quantity'] ?? 0);
+
+                        if ($item_id <= 0 || $quantity <= 0) {
+                            throw new Exception('Invalid item data');
+                        }
+
+                        // Check stock
+                        $stockStmt = $db->prepare("SELECT stock FROM food_and_drinks WHERE id = ?");
+                        $stockStmt->bind_param("i", $item_id);
+                        $stockStmt->execute();
+                        $stockResult = $stockStmt->get_result()->fetch_assoc();
+
+                        if (!$stockResult) {
+                            throw new Exception("Item with ID {$item_id} not found");
+                        }
+
+                        if ($stockResult['stock'] < $quantity) {
+                            throw new Exception("Insufficient stock for item: {$item['item_name']}. Available: {$stockResult['stock']}, Requested: {$quantity}");
+                        }
+
+                        // Reduce stock
+                        $updateStockStmt = $db->prepare("UPDATE food_and_drinks SET stock = stock - ? WHERE id = ?");
+                        $updateStockStmt->bind_param("ii", $quantity, $item_id);
+                        if (!$updateStockStmt->execute()) {
+                            throw new Exception('Failed to update stock for item: ' . $item['item_name']);
+                        }
+                    }
+
+                    // Create transaction record
+                    $user_id = $_SESSION['user_id'] ?? 1;
+                    $payment_details_json = $payment_details ? json_encode($payment_details) : null;
+
+                    $transactionStmt = $db->prepare("
+                        INSERT INTO transactions 
+                        (customer_name, customer_number, gaming_amount, fandd_amount, subtotal, tax_amount, 
+                         total_amount, final_amount, payment_method, payment_details, payment_status, 
+                         created_by, branch_id, transaction_date, payment_date) 
+                        VALUES (?, ?, 0.00, ?, ?, ?, ?, ?, ?, ?, 'completed', ?, ?, NOW(), NOW())
+                    ");
+
+                    $transactionStmt->bind_param(
+                        "ssddddsssii",
+                        $customer_name,
+                        $customer_number,
+                        $fandd_amount,
+                        $fandd_amount, // subtotal (same as fandd_amount for F&D only)
+                        $tax_amount,
+                        $total_amount,
+                        $final_amount,
+                        $payment_method,
+                        $payment_details_json,
+                        $user_id,
+                        $branch_id
+                    );
+
+                    if (!$transactionStmt->execute()) {
+                        throw new Exception('Failed to create transaction: ' . $transactionStmt->error);
+                    }
+
+                    $transaction_id = $db->insert_id;
+
+                    // Create transaction items
+                    foreach ($items as $item) {
+                        $itemStmt = $db->prepare("
+                            INSERT INTO transaction_items 
+                            (transaction_id, item_type, item_id, item_name, quantity, unit_price, total_price) 
+                            VALUES (?, 'food', ?, ?, ?, ?, ?)
+                        ");
+
+                        $item_id = intval($item['fandd_item_id'] ?? 0);
+                        $item_name = $item['item_name'] ?? '';
+                        $quantity = intval($item['quantity'] ?? 0);
+                        $unit_price = floatval($item['unit_price'] ?? 0);
+                        $total_price = floatval($item['total_price'] ?? 0);
+
+                        $itemStmt->bind_param("iisidd", $transaction_id, $item_id, $item_name, $quantity, $unit_price, $total_price);
+
+                        if (!$itemStmt->execute()) {
+                            throw new Exception('Failed to create transaction item: ' . $item['item_name']);
+                        }
+                    }
+
+                    // Log activity
+                    $logStmt = $db->prepare("
+                        INSERT INTO activity_logs (user_id, action, description, created_at) 
+                        VALUES (?, 'fandd_billing', ?, NOW())
+                    ");
+                    $logMessage = "F&D billing processed: ₹{$final_amount} ({$payment_method}), Customer: {$customer_name}, Transaction ID: {$transaction_id}";
+                    $logStmt->bind_param("is", $user_id, $logMessage);
+                    $logStmt->execute();
+
+                    // Commit transaction
+                    $db->commit();
+
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'Payment processed successfully',
+                        'data' => [
+                            'transaction_id' => $transaction_id,
+                            'customer_name' => $customer_name,
+                            'items' => $items,
+                            'fandd_amount' => $fandd_amount,
+                            'tax_amount' => $tax_amount,
+                            'total_amount' => $total_amount,
+                            'final_amount' => $final_amount,
+                            'payment_method' => $payment_method
+                        ]
+                    ]);
+                } catch (Exception $e) {
+                    $db->rollback();
+                    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+                }
             } else {
                 echo json_encode(['success' => false, 'message' => 'Invalid action']);
             }

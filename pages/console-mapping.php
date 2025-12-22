@@ -13,7 +13,10 @@ require_once __DIR__ . '/../includes/header.php';
 <section id="console-mapping" class="content-section active">
     <div class="section-header">
         <h2 class="section-title">Console Management</h2>
-        <button id="add-console-btn" class="btn btn--primary">Add Console</button>
+        <div class="header-actions">
+            <button id="pause-all-btn" class="btn btn--warning">⏸️ Pause All</button>
+            <button id="add-console-btn" class="btn btn--primary">Add Console</button>
+        </div>
     </div>
     <div class="console-grid" id="console-grid">
         <!-- Consoles will be loaded here dynamically -->
@@ -192,6 +195,41 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="modal-actions">
             <button type="button" class="btn btn--secondary" id="cancel-pause">Cancel</button>
             <button type="button" class="btn btn--primary" id="confirm-pause-btn">Pause Session</button>
+        </div>
+    </div>
+</div>
+
+<!-- Pause All Sessions Modal -->
+<div id="pause-all-modal" class="modal hidden">
+    <div class="modal-content">
+        <h3>Pause All Sessions</h3>
+        <p style="margin-bottom: 20px; color: var(--color-text-secondary);">This will pause all active sessions across all consoles with the same reason.</p>
+        <div class="form-group">
+            <label class="form-label">Pause Reason *</label>
+            <select class="form-control" id="pause-all-reason" required>
+                <option value="">Select a reason</option>
+                <option value="Customer Break">Customer Break</option>
+                <option value="Technical Issue">Technical Issue</option>
+                <option value="Food Order">Food Order</option>
+                <option value="Bathroom Break">Bathroom Break</option>
+                <option value="Phone Call">Phone Call</option>
+                <option value="Console Maintenance">Console Maintenance</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+        <div class="form-group" id="custom-reason-group-all" style="display: none;">
+            <label class="form-label">Custom Reason *</label>
+            <input type="text" class="form-control" id="custom-pause-reason-all" placeholder="Enter custom reason">
+        </div>
+        <div id="pause-all-progress" style="display: none; margin: 20px 0;">
+            <div style="background: var(--color-bg-2); padding: 15px; border-radius: 8px;">
+                <p style="margin: 0 0 10px 0;"><strong>Pausing sessions...</strong></p>
+                <div id="pause-all-status" style="color: var(--color-text-secondary); font-size: 14px;"></div>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="btn btn--secondary" id="cancel-pause-all">Cancel</button>
+            <button type="button" class="btn btn--warning" id="confirm-pause-all-btn">Pause All Sessions</button>
         </div>
     </div>
 </div>
@@ -1063,6 +1101,136 @@ require_once __DIR__ . '/../includes/header.php';
                     alert('Error: ' + result.message);
                 }
             });
+    }
+
+    // Show Pause All Modal
+    function showPauseAllModal() {
+        document.getElementById('pause-all-reason').value = '';
+        document.getElementById('custom-pause-reason-all').value = '';
+        document.getElementById('custom-reason-group-all').style.display = 'none';
+        document.getElementById('pause-all-progress').style.display = 'none';
+        document.getElementById('pause-all-status').textContent = '';
+        document.getElementById('pause-all-modal').classList.remove('hidden');
+    }
+
+    // Pause All Sessions
+    async function pauseAllSessions(reason) {
+        const progressDiv = document.getElementById('pause-all-progress');
+        const statusDiv = document.getElementById('pause-all-status');
+        const confirmBtn = document.getElementById('confirm-pause-all-btn');
+        const cancelBtn = document.getElementById('cancel-pause-all');
+
+        // Show progress
+        progressDiv.style.display = 'block';
+        confirmBtn.disabled = true;
+        cancelBtn.disabled = true;
+        statusDiv.textContent = 'Fetching active sessions...';
+
+        try {
+            // Get all active sessions
+            const sessionsResponse = await fetch(`${SITE_URL}/api/sessions.php?action=list`);
+            const sessionsResult = await sessionsResponse.json();
+
+            if (!sessionsResult.success || !sessionsResult.data || sessionsResult.data.length === 0) {
+                statusDiv.textContent = 'No active sessions found.';
+                setTimeout(() => {
+                    document.getElementById('pause-all-modal').classList.add('hidden');
+                    progressDiv.style.display = 'none';
+                    confirmBtn.disabled = false;
+                    cancelBtn.disabled = false;
+                }, 2000);
+                return;
+            }
+
+            // Filter only active sessions (not paused)
+            const activeSessions = sessionsResult.data.filter(session => session.status === 'active');
+
+            if (activeSessions.length === 0) {
+                statusDiv.textContent = 'No active sessions to pause. All sessions are already paused.';
+                setTimeout(() => {
+                    document.getElementById('pause-all-modal').classList.add('hidden');
+                    progressDiv.style.display = 'none';
+                    confirmBtn.disabled = false;
+                    cancelBtn.disabled = false;
+                }, 2000);
+                return;
+            }
+
+            statusDiv.textContent = `Found ${activeSessions.length} active session(s). Pausing...`;
+
+            // Pause all active sessions
+            const pausePromises = activeSessions.map(async (session, index) => {
+                try {
+                    const response = await fetch(`${SITE_URL}/api/sessions.php?action=pause`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            console_id: session.console_id,
+                            reason: reason
+                        })
+                    });
+                    const result = await response.json();
+
+                    statusDiv.textContent = `Pausing session ${index + 1} of ${activeSessions.length}... (${session.console_name || 'Console ' + session.console_id})`;
+
+                    return {
+                        success: result.success,
+                        console_id: session.console_id,
+                        message: result.message
+                    };
+                } catch (error) {
+                    return {
+                        success: false,
+                        console_id: session.console_id,
+                        message: error.message
+                    };
+                }
+            });
+
+            const results = await Promise.all(pausePromises);
+
+            // Count successes and failures
+            const successful = results.filter(r => r.success).length;
+            const failed = results.filter(r => !r.success).length;
+
+            // Stop all timers
+            Object.keys(sessionTimers).forEach(consoleId => {
+                clearInterval(sessionTimers[consoleId]);
+                delete sessionTimers[consoleId];
+            });
+
+            statusDiv.textContent = `Completed: ${successful} paused successfully${failed > 0 ? ', ' + failed + ' failed' : ''}.`;
+
+            // Reload consoles after a short delay
+            setTimeout(() => {
+                <?php if (Auth::isManagerRestricted()): ?>
+                    loadConsoles('<?php echo Auth::userBranchId() ?? 1; ?>');
+                <?php else: ?>
+                    loadConsoles();
+                <?php endif; ?>
+
+                setTimeout(() => {
+                    document.getElementById('pause-all-modal').classList.add('hidden');
+                    progressDiv.style.display = 'none';
+                    confirmBtn.disabled = false;
+                    cancelBtn.disabled = false;
+
+                    if (successful > 0) {
+                        alert(`Successfully paused ${successful} session(s)${failed > 0 ? '. ' + failed + ' session(s) failed to pause.' : '.'}`);
+                    } else {
+                        alert('Failed to pause sessions. Please try again.');
+                    }
+                }, 500);
+            }, 1500);
+
+        } catch (error) {
+            statusDiv.textContent = 'Error: ' + error.message;
+            confirmBtn.disabled = false;
+            cancelBtn.disabled = false;
+            alert('Error pausing sessions: ' + error.message);
+        }
     }
 
     // End Session
@@ -2227,6 +2395,43 @@ require_once __DIR__ . '/../includes/header.php';
         document.getElementById('pause-session-modal').classList.add('hidden');
     });
 
+    // Pause All Button Event Listener
+    document.getElementById('pause-all-btn').addEventListener('click', showPauseAllModal);
+
+    // Pause All Modal Event Listeners
+    document.getElementById('pause-all-reason').addEventListener('change', function() {
+        const customGroup = document.getElementById('custom-reason-group-all');
+        if (this.value === 'Other') {
+            customGroup.style.display = 'block';
+            document.getElementById('custom-pause-reason-all').required = true;
+        } else {
+            customGroup.style.display = 'none';
+            document.getElementById('custom-pause-reason-all').required = false;
+        }
+    });
+
+    document.getElementById('confirm-pause-all-btn').addEventListener('click', function() {
+        const reason = document.getElementById('pause-all-reason').value;
+        const customReason = document.getElementById('custom-pause-reason-all').value;
+
+        if (!reason) {
+            alert('Please select a pause reason');
+            return;
+        }
+
+        if (reason === 'Other' && !customReason.trim()) {
+            alert('Please enter a custom reason');
+            return;
+        }
+
+        const finalReason = reason === 'Other' ? customReason.trim() : reason;
+        pauseAllSessions(finalReason);
+    });
+
+    document.getElementById('cancel-pause-all').addEventListener('click', function() {
+        document.getElementById('pause-all-modal').classList.add('hidden');
+    });
+
     // Initial load
     loadConsoleBranches();
 
@@ -2250,6 +2455,15 @@ require_once __DIR__ . '/../includes/header.php';
 
     .section-header {
         background-color: var(--color-background) !important;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 12px;
+        align-items: center;
     }
 
     .section-title {
@@ -2268,6 +2482,30 @@ require_once __DIR__ . '/../includes/header.php';
         font-weight: 600;
         cursor: pointer;
         transition: background-color 0.2s ease;
+    }
+
+    #pause-all-btn,
+    .btn--warning {
+        background: #f59e0b !important;
+        color: #ffffff !important;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+
+    #pause-all-btn:hover,
+    .btn--warning:hover {
+        background: #d97706 !important;
+    }
+
+    #pause-all-btn:disabled,
+    .btn--warning:disabled {
+        background: #9ca3af !important;
+        cursor: not-allowed;
+        opacity: 0.6;
     }
 
     #add-console-btn:hover {
